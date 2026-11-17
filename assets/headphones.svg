@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 520" role="img" aria-label="Illustration of headphones"><defs>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="18"/></filter>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFCF1"/><stop offset="1" stop-color="#E9E1CF"/></linearGradient>
+    <linearGradient id="olive" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#71813D"/><stop offset="1" stop-color="#283A20"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#F5EBD1"/><stop offset=".46" stop-color="#C4BFA7"/><stop offset="1" stop-color="#7A8066"/></linearGradient>
+    <linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FAF4DE"/><stop offset="1" stop-color="#C8CEAF"/></linearGradient>
+    <pattern id="grain" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="3" r=".5" fill="#66734C" opacity=".12"/><circle cx="7" cy="8" r=".6" fill="#F7F5E9" opacity=".3"/></pattern>
+    </defs><rect width="100%" height="100%" fill="#E0E9CB"/>
+    <rect width="100%" height="100%" fill="url(#grain)"/><ellipse cx="301" cy="428" rx="170" ry="25" fill="#55574C" opacity=".15" filter="url(#shadow)"/>
+<g transform="rotate(-10 300 270)"><path d="M172 289V237C172 101 434 101 434 237V291" fill="none" stroke="#6C785A" stroke-width="60" stroke-linecap="round"/><path d="M174 278V234C174 117 430 117 430 234V277" fill="none" stroke="url(#metal)" stroke-width="38" stroke-linecap="round"/><rect x="138" y="250" width="92" height="151" rx="37" fill="#C7CEB6" stroke="#6B765D" stroke-width="9"/><rect x="371" y="250" width="92" height="151" rx="37" fill="#C7CEB6" stroke="#6B765D" stroke-width="9"/><rect x="159" y="270" width="45" height="108" rx="21" fill="#E8EAD5"/><rect x="394" y="270" width="45" height="108" rx="21" fill="#E8EAD5"/></g></svg>

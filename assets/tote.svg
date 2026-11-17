@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 520" role="img" aria-label="Illustration of tote"><defs>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="18"/></filter>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFCF1"/><stop offset="1" stop-color="#E9E1CF"/></linearGradient>
+    <linearGradient id="olive" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#71813D"/><stop offset="1" stop-color="#283A20"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#F5EBD1"/><stop offset=".46" stop-color="#C4BFA7"/><stop offset="1" stop-color="#7A8066"/></linearGradient>
+    <linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FAF4DE"/><stop offset="1" stop-color="#C8CEAF"/></linearGradient>
+    <pattern id="grain" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="3" r=".5" fill="#66734C" opacity=".12"/><circle cx="7" cy="8" r=".6" fill="#F7F5E9" opacity=".3"/></pattern>
+    </defs><rect width="100%" height="100%" fill="#E9E2D5"/>
+    <rect width="100%" height="100%" fill="url(#grain)"/><ellipse cx="300" cy="433" rx="170" ry="24" fill="#66654A" opacity=".18" filter="url(#shadow)"/>
+<g transform="rotate(5 306 277)"><path d="M160 178 L440 178 L419 436 Q304 455 180 427Z" fill="url(#fabric)" stroke="#B6BE9C" stroke-width="4"/><path d="M239 187Q226 99 304 98Q381 101 365 184" fill="none" stroke="#D2D4B3" stroke-width="29"/><path d="M239 187Q226 99 304 98Q381 101 365 184" fill="none" stroke="#F4F0D9" stroke-width="18"/><path d="M219 237Q291 211 388 236" fill="none" stroke="#AEB899" stroke-width="2"/><circle cx="300" cy="312" r="70" fill="#DDE3B7"/><path d="M300 366C281 331 267 299 273 266M301 341Q332 304 338 279" fill="none" stroke="#607440" stroke-width="5"/><path d="M284 313C247 279 239 269 248 252C277 256 291 277 284 313M319 323C348 301 367 282 360 264C332 264 313 291 319 323" fill="#718852"/></g></svg>
