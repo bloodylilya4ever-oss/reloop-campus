@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 520" role="img" aria-label="Illustration of plant"><defs>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="18"/></filter>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFCF1"/><stop offset="1" stop-color="#E9E1CF"/></linearGradient>
+    <linearGradient id="olive" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#71813D"/><stop offset="1" stop-color="#283A20"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#F5EBD1"/><stop offset=".46" stop-color="#C4BFA7"/><stop offset="1" stop-color="#7A8066"/></linearGradient>
+    <linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FAF4DE"/><stop offset="1" stop-color="#C8CEAF"/></linearGradient>
+    <pattern id="grain" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="3" r=".5" fill="#66734C" opacity=".12"/><circle cx="7" cy="8" r=".6" fill="#F7F5E9" opacity=".3"/></pattern>
+    </defs><rect width="100%" height="100%" fill="#E8E8D1"/>
+    <rect width="100%" height="100%" fill="url(#grain)"/><ellipse cx="305" cy="442" rx="150" ry="26" fill="#51533F" opacity=".17" filter="url(#shadow)"/>
+<path d="M305 338V134M306 250Q244 193 208 141M308 259Q388 193 414 150M304 292Q250 289 214 235" stroke="#4A6740" stroke-width="9" fill="none" stroke-linecap="round"/>
+<path d="M305 169C256 151 252 99 295 77C314 110 322 139 305 169M240 195C187 198 158 175 151 132C194 122 232 148 240 195M366 210C413 199 440 165 444 125C393 120 365 169 366 210M249 289C205 313 169 305 151 263C193 239 229 254 249 289M336 270C396 280 431 248 438 214C384 196 344 228 336 270" fill="#587B49"/>
+<path d="M220 340H388L366 437H247Z" fill="#BE9271"/><path d="M223 340H386L379 361H233Z" fill="#DAAD87"/><path d="M242 370H372" stroke="#A87554" stroke-width="3"/></svg>
