@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 520" role="img" aria-label="Illustration of notebooks"><defs>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="18"/></filter>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFCF1"/><stop offset="1" stop-color="#E9E1CF"/></linearGradient>
+    <linearGradient id="olive" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#71813D"/><stop offset="1" stop-color="#283A20"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#F5EBD1"/><stop offset=".46" stop-color="#C4BFA7"/><stop offset="1" stop-color="#7A8066"/></linearGradient>
+    <linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FAF4DE"/><stop offset="1" stop-color="#C8CEAF"/></linearGradient>
+    <pattern id="grain" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="3" r=".5" fill="#66734C" opacity=".12"/><circle cx="7" cy="8" r=".6" fill="#F7F5E9" opacity=".3"/></pattern>
+    </defs><rect width="100%" height="100%" fill="#E7E8DA"/>
+    <rect width="100%" height="100%" fill="url(#grain)"/><ellipse cx="301" cy="437" rx="184" ry="28" fill="#5B6147" opacity=".2" filter="url(#shadow)"/>
+<g transform="rotate(-14 270 290)"><rect x="151" y="163" width="242" height="280" rx="8" fill="#C1B18B"/><rect x="160" y="151" width="242" height="280" rx="8" fill="#F7F2E6"/><rect x="180" y="151" width="40" height="280" fill="#D3DCAE"/><path d="M255 236h113M255 254h83M255 274h98" stroke="#A7A78D" stroke-width="3"/></g><g transform="rotate(12 340 264)"><rect x="265" y="92" width="205" height="268" rx="9" fill="#4B6142"/><rect x="281" y="108" width="172" height="238" rx="5" fill="#657B4F"/><text x="365" y="222" font-family="Arial" font-size="24" font-weight="700" letter-spacing="3" fill="#EBF3D7" text-anchor="middle">MAKE</text><text x="365" y="252" font-family="Arial" font-size="24" font-weight="700" letter-spacing="3" fill="#EBF3D7" text-anchor="middle">SPACE</text></g></svg>

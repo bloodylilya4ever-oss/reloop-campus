@@ -1,0 +1,47 @@
+{
+  "total": 10,
+  "passed": 10,
+  "results": [
+    {
+      "name": "Category filter returns only Books",
+      "passed": true
+    },
+    {
+      "name": "Policy keyword held for staff review",
+      "passed": true
+    },
+    {
+      "name": "Pending review does not appear publicly",
+      "passed": true
+    },
+    {
+      "name": "Staff manual approval makes listing visible",
+      "passed": true
+    },
+    {
+      "name": "Staff-approved listing searchable",
+      "passed": true
+    },
+    {
+      "name": "Report freezes exchange and keeps record",
+      "passed": true
+    },
+    {
+      "name": "Manual resolution restores frozen exchange and logs decision",
+      "passed": true
+    },
+    {
+      "name": "Student injected staff tab cannot show staff page",
+      "passed": true
+    },
+    {
+      "name": "Escape closes modal",
+      "passed": true
+    },
+    {
+      "name": "Legacy v3 data migrates without reset",
+      "passed": true
+    }
+  ],
+  "errors": []
+}

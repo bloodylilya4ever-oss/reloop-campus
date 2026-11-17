@@ -1,0 +1,183 @@
+{
+  "passed": 35,
+  "total": 35,
+  "tests": [
+    {
+      "name": "Guest entry shows dual portal",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Student portal entry and navigation",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Student deep link guard",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Marketplace search",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Saved item persisted in student state",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "New listing retained with demo owner",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Reservation pending and item held",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "One sided scan cannot finish",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Two-sided handover completes and awards once",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Student points derived from verified changes",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Cannot reserve own listing",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Actions pending, no auto points",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Student personal activity contains pending IDs",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Staff entry dashboard",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Staff deep link guard",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Approval updates single ledger and audit",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Repeat approval cannot issue points",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Rejected records reason and no points",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Moderation queue seeded report shown",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Staff report review saves audit",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Facility work order created",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Duplicate work order prevented",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Work order resolved and count updated",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Sustainability clearly labels synthetic and unavailable",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Audit view populated from events",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Refresh restores staff role and shared state",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Cross-portal review feedback student side",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Student event handler staff gate",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Reset restores demo seed and exits role",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Student width 375: no horizontal overflow",
+      "pass": true,
+      "detail": "{'sw': 375, 'cw': 375}"
+    },
+    {
+      "name": "Staff width 375: no horizontal overflow",
+      "pass": true,
+      "detail": "{'sw': 375, 'cw': 375}"
+    },
+    {
+      "name": "Student width 768: no horizontal overflow",
+      "pass": true,
+      "detail": "{'sw': 768, 'cw': 768}"
+    },
+    {
+      "name": "Staff width 768: no horizontal overflow",
+      "pass": true,
+      "detail": "{'sw': 768, 'cw': 768}"
+    },
+    {
+      "name": "Student width 1440: no horizontal overflow",
+      "pass": true,
+      "detail": "{'sw': 1440, 'cw': 1440}"
+    },
+    {
+      "name": "Staff width 1440: no horizontal overflow",
+      "pass": true,
+      "detail": "{'sw': 1440, 'cw': 1440}"
+    }
+  ],
+  "page_errors": [],
+  "harness": "Chromium with inline assets and a localStorage shim under about:blank; real file/http navigation blocked in this environment"
+}

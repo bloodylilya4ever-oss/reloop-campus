@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 520" role="img" aria-label="Illustration of chair"><defs>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="18"/></filter>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFCF1"/><stop offset="1" stop-color="#E9E1CF"/></linearGradient>
+    <linearGradient id="olive" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#71813D"/><stop offset="1" stop-color="#283A20"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#F5EBD1"/><stop offset=".46" stop-color="#C4BFA7"/><stop offset="1" stop-color="#7A8066"/></linearGradient>
+    <linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FAF4DE"/><stop offset="1" stop-color="#C8CEAF"/></linearGradient>
+    <pattern id="grain" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="3" r=".5" fill="#66734C" opacity=".12"/><circle cx="7" cy="8" r=".6" fill="#F7F5E9" opacity=".3"/></pattern>
+    </defs><rect width="100%" height="100%" fill="#E5E8D4"/>
+    <rect width="100%" height="100%" fill="url(#grain)"/><ellipse cx="310" cy="448" rx="180" ry="23" fill="#51513F" opacity=".16" filter="url(#shadow)"/>
+<g transform="rotate(4 300 260)"><path d="M181 113 Q304 70 418 125L404 286Q302 319 198 282Z" fill="#AA815B" stroke="#6F523A" stroke-width="7"/><path d="M195 121Q301 87 402 132L391 266Q304 286 212 264Z" fill="#C3A27A"/><path d="M165 282Q312 252 442 290L398 340H205Z" fill="#795A42"/><path d="M186 289Q306 266 422 295L393 327H213Z" fill="#B99268"/><path d="M211 335L187 459M397 335L424 460" stroke="#58493B" stroke-width="17" stroke-linecap="round"/><path d="M220 340L211 450M389 340L397 449" stroke="#9B754F" stroke-width="8" stroke-linecap="round"/></g></svg>
