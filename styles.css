@@ -78,3 +78,7 @@
 #view-home > .portal-selector {
   display: none;
 }
+/* Preserve RELOOP button text color on iOS Safari */
+.quick-action-grid button {
+  color: var(--ink);
+}
