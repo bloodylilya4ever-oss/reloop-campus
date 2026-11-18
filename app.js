@@ -68,7 +68,7 @@
   }
   function hasRole(r){return role===r;}
   function roleGate(required){if(hasRole(required))return true;announce('Please enter the '+required+' demo portal to use that action.');return false;}
-  function chooseRole(next){if(!['student','staff'].includes(next))return;role=next;try{localStorage.setItem(ROLE_KEY,role);}catch(e){}closeModal();refreshRole();navigate(next==='staff'?'operations':'student');announce('You are now viewing the '+next+' demo portal.');}
+  function chooseRole(next){if(!['student','staff'].includes(next))return;role=next;try{localStorage.setItem(ROLE_KEY,role);}catch(e){}closeModal();refreshRole();navigate(next==='staff'?'operations':'exchange');announce('You are now viewing the '+next+' demo portal.');}
   function exitRole(){role='guest';try{localStorage.removeItem(ROLE_KEY);}catch(e){}closeModal();refreshRole();navigate('home', false);announce('Demo role cleared. Shared sample records are retained.');}
   function refreshRole(){
     $$('[data-student-only]').forEach(el=>el.hidden=role!=='student');
