@@ -82,3 +82,217 @@
 .quick-action-grid button {
   color: var(--ink);
 }
+
+
+/* RELOOP onboarding — scoped to the existing shared modal; no other modal/layout changed. */
+.modal-shell.onboarding-active {
+  width:min(980px,calc(100vw - 40px));
+  max-height:90vh;
+  max-height:90dvh;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scroll-behavior:smooth;
+  border-radius:12px;
+}
+.modal-shell.onboarding-active .modal-close {
+  position:sticky;
+  top:12px;
+  margin:12px 12px -49px auto;
+  box-shadow:0 4px 18px rgba(33,49,29,.10);
+}
+.onboarding-dialog{padding:36px 32px 0;}
+.onboarding-intro {display:grid;grid-template-columns:1.04fr .96fr;align-items:center;gap:26px;min-height:365px;padding:20px 8px 18px;}
+.onboarding-copy {min-width:0;padding:10px 0;}
+.onboarding-copy .eyebrow {color:var(--olive);}
+.onboarding-dialog .onboarding-copy h2 {font-size:clamp(35px,4.2vw,62px);line-height:1.03;margin:20px 0 22px;letter-spacing:-.065em;}
+.onboarding-dialog .onboarding-copy h2 i {font-family:var(--serif);color:var(--olive);font-weight:400;}
+.onboarding-dialog .onboarding-copy p {font-size:14px;line-height:1.7;max-width:450px;margin:0 0 25px;color:#626D5D;}
+.onboarding-art {background:#E9EEDC;border-radius:9px;overflow:hidden;aspect-ratio:1.12/1;align-self:stretch;min-height:260px;}
+.onboarding-art img {width:100%;height:100%;object-fit:cover;object-position:center;}
+.onboarding-highlights {display:flex;gap:8px;flex-wrap:wrap;}
+.onboarding-highlights span {display:inline-flex;align-items:center;gap:7px;border:1px solid #CDD6C0;border-radius:30px;padding:8px 11px;color:#53683C;background:#F6F8EE;font-size:11px;line-height:1.25;}
+.onboarding-highlights b {font-weight:650;}
+.onboarding-start {background:var(--lime);border-radius:9px;min-height:132px;padding:26px 32px;margin:12px 0 44px;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+.onboarding-start .eyebrow{color:#54653F;}
+.onboarding-start h3{font-size:clamp(27px,3vw,38px);margin:8px 0 0;}
+.onboarding-start .btn{flex:none;}
+.onboarding-roles{scroll-margin-top:24px;padding:0 0 12px;}
+.onboarding-roles>.eyebrow{color:var(--olive);}
+.onboarding-roles h3{font-size:clamp(35px,4.4vw,52px);margin:12px 0;}
+.onboarding-roles h3 i{font-family:var(--serif);font-weight:400;color:var(--olive);}
+.onboarding-roles>p{max-width:570px;line-height:1.65;font-size:13px;margin:0 0 23px;}
+.onboarding-role-grid{gap:18px;}
+.onboarding-dialog .onboarding-role-grid .portal-choice {padding:22px 24px 24px;min-height:420px;align-items:stretch;}
+.onboarding-dialog .onboarding-role-grid .portal-choice:hover{transform:translateY(-3px);}
+.onboarding-avatar {height:182px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;margin:12px 0 2px;border-radius:6px;}
+.student-choice .onboarding-avatar{background:rgba(255,255,255,.35);}
+.staff-choice .onboarding-avatar{background:rgba(224,243,170,.08);}
+.onboarding-avatar img{height:100%;width:auto;max-width:100%;object-fit:contain;object-position:center bottom;}
+.onboarding-dialog .onboarding-role-grid .portal-choice strong {font-size:clamp(28px,3vw,39px);margin:10px 0 7px;line-height:1.13;}
+.onboarding-dialog .onboarding-role-grid .portal-choice-desc{max-width:355px;font-size:12px;line-height:1.55;margin-bottom:16px;}
+.onboarding-dialog .onboarding-role-grid .portal-choice-cta{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:13px;}
+.onboarding-footnote{font-size:10px!important;letter-spacing:.1em;color:#78836D;text-align:center;padding:25px 0 20px;margin:0!important;}
+@media (max-width:700px){
+  .modal-shell.onboarding-active{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:9px;}
+  .onboarding-dialog{padding:39px 18px 0;}
+  .onboarding-intro{grid-template-columns:1fr;gap:10px;padding:9px 0 10px;}
+  .onboarding-dialog .onboarding-copy h2{font-size:clamp(34px,9vw,49px);margin:16px 0;}
+  .onboarding-art{aspect-ratio:1.65/1;min-height:0;}
+  .onboarding-start{padding:23px 20px;margin:18px 0 38px;flex-direction:column;align-items:flex-start;gap:14px;}
+  .onboarding-start .btn{width:100%;}
+  .onboarding-dialog .onboarding-role-grid{grid-template-columns:1fr;}
+  .onboarding-dialog .onboarding-role-grid .portal-choice{min-height:330px;padding:20px;}
+  .onboarding-avatar{height:155px;margin:8px 0 3px;}
+  .onboarding-dialog .onboarding-role-grid .portal-choice strong{font-size:32px;margin:7px 0;}
+}
+@media (prefers-reduced-motion: reduce){
+  .modal-shell.onboarding-active{scroll-behavior:auto;}
+  .onboarding-dialog .portal-choice{transition:none;}
+  .onboarding-dialog .portal-choice:hover{transform:none;}
+}
+
+/* ==========================================
+   RELOOP ONBOARDING — RESPONSIVE LAYOUT FIX
+   ========================================== */
+
+/* 1. Only allow vertical scrolling inside onboarding */
+.modal-shell.onboarding-active {
+  width: min(980px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* 2. Prevent inner content from stretching the modal */
+.onboarding-dialog {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.onboarding-dialog *,
+.onboarding-dialog *::before,
+.onboarding-dialog *::after {
+  box-sizing: border-box;
+}
+
+.onboarding-intro,
+.onboarding-copy,
+.onboarding-art,
+.onboarding-start,
+.onboarding-roles {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* 3. Balanced text and image columns */
+.onboarding-intro {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: center;
+  gap: clamp(16px, 2.5vw, 28px);
+  min-height: 0;
+}
+
+/* 4. Respect the original image's 16:9 proportions */
+.onboarding-art {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 1500 / 844;
+  align-self: center;
+  overflow: hidden;
+}
+
+.onboarding-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* 5. Allow text and feature labels to wrap */
+.onboarding-copy h2,
+.onboarding-roles h3,
+.onboarding-start h3 {
+  overflow-wrap: break-word;
+}
+
+.onboarding-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+/* 6. Prevent role cards from overflowing */
+.onboarding-role-grid {
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  max-width: 100%;
+}
+
+.onboarding-role-grid .portal-choice {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.onboarding-role-grid .portal-choice-desc {
+  overflow-wrap: anywhere;
+}
+
+/* 7. Keep the CTA flexible */
+.onboarding-start > div {
+  min-width: 0;
+}
+
+/* Tablet and smaller desktop windows */
+@media (max-width: 850px) {
+  .onboarding-intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .onboarding-art {
+    width: 100%;
+    max-width: 620px;
+    justify-self: center;
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 700px) {
+  .modal-shell.onboarding-active {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+
+  .onboarding-intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .onboarding-art {
+    aspect-ratio: 1500 / 844;
+    min-height: 0;
+  }
+
+  .onboarding-role-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .onboarding-start {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .onboarding-start .btn {
+    width: 100%;
+    max-width: 100%;
+  }
+}

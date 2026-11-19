@@ -51,13 +51,25 @@
         <div class="hero-visual"><img src="assets/hero-still-life.svg" alt="Editorial illustration of stacked second-hand books and a reusable canvas bag" width="800" height="710"><div class="hero-stamp"><span>PASS IT ON</span><strong>↗&#xFE0E;</strong><span>KEEP IT GOING</span></div><div class="hero-visual-label"><span>PRE-LOVED OBJECTS</span><span>NEW POSSIBILITIES / 2026</span></div></div>
       </div>
 
-      <section class="portal-selector container" aria-labelledby="portal-select-title">
-        <div class="portal-selector-head"><div><span class="eyebrow">YOUR CAMPUS. TWO WAYS TO PARTICIPATE.</span><h2 id="portal-select-title">Choose your <i>perspective.</i></h2></div><p>Explore ReLoop as a student or a campus staff member. Both views share the same simulated events — there is no real sign-in.</p></div>
-        <div class="portal-selector-grid">
-          <button class="portal-choice student-choice" type="button" data-enter-role="student"><span class="portal-choice-top">01 / STUDENT DEMO <span>↗&#xFE0E;</span></span><span class="portal-choice-mark" aria-hidden="true">✳&#xFE0E;</span><strong>I am Student<br>/User</strong><span class="portal-choice-desc">Browse items, exchange, record circular actions, and see your own activity.</span><span class="portal-choice-cta">Continue as student &nbsp; →</span></button>
-          <button class="portal-choice staff-choice" type="button" data-enter-role="staff"><span class="portal-choice-top">02 / STAFF DEMO <span>↗&#xFE0E;</span></span><span class="portal-choice-mark" aria-hidden="true">◎&#xFE0E;</span><strong>I am Staff</strong><span class="portal-choice-desc">Verify activities, moderate listings, manage collection points and follow up on issues.</span><span class="portal-choice-cta">Continue as staff &nbsp; →</span></button>
+      <!-- One source of truth for role cards, cloned inside the shared modal. -->
+      <template id="portal-role-template">
+        <div class="portal-selector-grid onboarding-role-grid">
+          <button class="portal-choice student-choice" type="button" data-enter-role="student">
+            <span class="portal-choice-top">01 / STUDENT DEMO <span aria-hidden="true">↗&#xFE0E;</span></span>
+            <span class="onboarding-avatar" aria-hidden="true"><img src="assets/role-student.webp" alt="" width="650" height="813"></span>
+            <strong>I'm Student/User</strong>
+            <span class="portal-choice-desc">Find pre-loved essentials, share what you no longer need, and track verified rewards.</span>
+            <span class="portal-choice-cta">Continue to Marketplace <span aria-hidden="true">→</span></span>
+          </button>
+          <button class="portal-choice staff-choice" type="button" data-enter-role="staff">
+            <span class="portal-choice-top">02 / STAFF DEMO <span aria-hidden="true">↗&#xFE0E;</span></span>
+            <span class="onboarding-avatar" aria-hidden="true"><img src="assets/role-staff.webp" alt="" width="650" height="813"></span>
+            <strong>I'm Staff</strong>
+            <span class="portal-choice-desc">Review activity submissions, resolve issues, and support a more circular campus.</span>
+            <span class="portal-choice-cta">Continue to Operations <span aria-hidden="true">→</span></span>
+          </button>
         </div>
-      </section>
+      </template>
       <div class="statement-bar"><div class="container statement-inner"><span>RETHINK WHAT WE THROW AWAY</span><span class="statement-sun">✳&#xFE0E;</span><span>REUSE IS THE NEW ROUTINE</span><span class="statement-sun">✳&#xFE0E;</span><span>ONE CAMPUS. MORE POSSIBILITIES.</span></div></div>
       <section class="section container featured-home" aria-labelledby="home-featured-title"><div class="section-heading"><div><span class="eyebrow">01 / THE EXCHANGE</span><h2 id="home-featured-title">Something good<br>is waiting <i>for you.</i></h2></div><div class="heading-aside"><p>Discover useful things from other students. A little less waste, a lot more value.</p><button type="button" class="inline-link" data-nav="exchange">Browse all listings <span aria-hidden="true">↗&#xFE0E;</span></button></div></div><div class="product-grid home-grid" id="home-products"></div></section>
       <section class="journey-section" aria-labelledby="journey-title"><div class="container journey-layout"><div class="journey-intro"><span class="eyebrow">02 / THE IDEA</span><h2 id="journey-title">Not just less waste.<br><i>A better cycle.</i></h2><p>One connected campus system gives reusable objects a new home and gives the facilities team clearer, more useful information.</p><button class="btn btn-outline" data-nav="circular" type="button">Discover circular actions <span aria-hidden="true">↗&#xFE0E;</span></button></div><div class="journey-steps"><button class="journey-row" data-nav="exchange" type="button"><span class="journey-no">01</span><span><strong>Exchange what you have</strong><small>List, reserve and hand over useful items.</small></span><span class="journey-arrow">↗&#xFE0E;</span></button><button class="journey-row" data-nav="circular" type="button"><span class="journey-no">02</span><span><strong>Make circular choices</strong><small>Recycle, donate or repair — with verification.</small></span><span class="journey-arrow">↗&#xFE0E;</span></button><button class="journey-row" data-nav="operations" type="button"><span class="journey-no">03</span><span><strong>See the campus impact</strong><small>Turn verified events into operational insight.</small></span><span class="journey-arrow">↗&#xFE0E;</span></button></div></div></section>

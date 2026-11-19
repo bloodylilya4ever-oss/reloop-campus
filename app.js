@@ -78,30 +78,46 @@
     document.body.dataset.role=role;
   }
   
-function showPortalChoice() {
-  const choices = $('.portal-selector-grid');
-
-  openModal(`
-    <div class="portal-dialog">
-      <span class="eyebrow">
-        RELOOP CAMPUS / DEMO ACCESS
-      </span>
-
-      <h2 id="modal-heading">
-        Choose your <i>perspective.</i>
-      </h2>
-
-      <p>
-        Continue as a student or campus staff member.
-        No real sign-in is required.
-      </p>
-
-      <div class="portal-selector-grid">
-        ${choices.innerHTML}
+  function showPortalChoice() {
+    const template = $('#portal-role-template');
+    if (!template) return;
+    openModal(`
+      <div class="portal-dialog onboarding-dialog">
+        <section class="onboarding-intro" aria-labelledby="modal-heading">
+          <div class="onboarding-copy">
+            <span class="eyebrow">RELOOP CAMPUS / DISCOVER</span>
+            <h2 id="modal-heading">Small actions.<br><i>A more circular campus.</i></h2>
+            <p>Give useful things another life. Exchange with students, repair or recycle responsibly, and earn points for verified actions. Campus staff help keep it all moving.</p>
+            <div class="onboarding-highlights" aria-label="What ReLoop offers">
+              <span>↗ <b>Exchange &amp; Reuse</b></span>
+              <span>↻ <b>Repair &amp; Recycle</b></span>
+              <span>✳ <b>Earn Rewards</b></span>
+              <span>◎ <b>Campus Sustainability</b></span>
+            </div>
+          </div>
+          <div class="onboarding-art">
+            <img src="assets/onboarding-campus.webp" alt="Illustration of students exchanging books, repairing items and sorting recyclable materials on campus" width="1500" height="844">
+          </div>
+        </section>
+        <section class="onboarding-start" aria-labelledby="onboarding-start-title">
+          <div>
+            <span class="eyebrow">01 / FROM A SMALL ACTION</span>
+            <h3 id="onboarding-start-title">Ready to make an impact?</h3>
+          </div>
+          <button type="button" class="btn btn-dark" data-onboarding-start="true">Get Started <span aria-hidden="true">↓</span></button>
+        </section>
+        <section class="onboarding-roles" id="onboarding-role-section" aria-labelledby="onboarding-role-title">
+          <span class="eyebrow">02 / CHOOSE YOUR PORTAL</span>
+          <h3 id="onboarding-role-title" tabindex="-1">How will you <i>take part?</i></h3>
+          <p>Explore a student or staff perspective. Both use the same fictional records; no sign-in is required.</p>
+          ${template.innerHTML}
+        </section>
+        <p class="onboarding-footnote">EDUCATIONAL PROTOTYPE / ALL USERS, EVENTS AND REWARDS ARE SIMULATED.</p>
       </div>
-    </div>
-  `);
-}
+    `);
+    $('#modal-shell').classList.add('onboarding-active');
+    $('#modal-shell').scrollTop = 0;
+  }
 
   function paint(){renderProducts();renderWallet();renderAdmin();renderStudent();renderProfile();renderStaffExtra();$('#global-points').textContent=state.points;$('#listing-count').textContent=String(state.items.filter(x=>x.status!=='Removed').length).padStart(2,'0');}
   function navigate(where, addHistory = true){
@@ -190,7 +206,7 @@ try {
     if(tab==='verification')renderVerificationRows();
   }
   function openModal(content){lastFocus=document.activeElement;$('#modal-body').innerHTML=content;$('#modal-backdrop').hidden=false;document.body.style.overflow='hidden';$('#modal-close').focus();}
-  function closeModal(){if($('#modal-backdrop').hidden)return;$('#modal-backdrop').hidden=true;$('#modal-body').innerHTML='';document.body.style.overflow='';if(lastFocus?.isConnected)lastFocus.focus();}
+  function closeModal(){if($('#modal-backdrop').hidden)return;$('#modal-backdrop').hidden=true;$('#modal-shell').classList.remove('onboarding-active');$('#modal-body').innerHTML='';document.body.style.overflow='';if(lastFocus?.isConnected)lastFocus.focus();}
   function showDetail(id){
     if(!roleGate('student'))return;const p=state.items.find(x=>x.id===id);if(!p)return;
     const r=state.reservations[p.id];let action='';
@@ -272,6 +288,17 @@ try {
   }
   function handleClick(event){
     const t=event.target.closest('button');if(!t)return;
+    if(t.dataset.onboardingStart){
+      const shell=$('#modal-shell');
+      const target=$('#onboarding-role-section');
+      if(shell&&target){
+        const top=target.getBoundingClientRect().top-shell.getBoundingClientRect().top+shell.scrollTop-32;
+        const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        shell.scrollTo({top:Math.max(0,top),behavior:reduced?'instant':'smooth'});
+        $('#onboarding-role-title')?.focus({preventScroll:true});
+      }
+      return;
+    }
     if(t.dataset.enterRole){chooseRole(t.dataset.enterRole);return;}if(t.dataset.open === 'portal'){ showPortalChoice();return;}
     if (t.dataset.nav && role === 'guest' && t.dataset.nav !== 'home'){  showPortalChoice();  return;}
     if(t.dataset.nav){if(t.dataset.profileTab)profileTab=t.dataset.profileTab;navigate(t.dataset.nav);if(t.dataset.jump&&role==='student'){requestAnimationFrame(()=>{const sel=t.dataset.jump==='wallet'?'#wallet-section':'#circular-tools';$(sel)?.scrollIntoView({behavior:'smooth',block:'start'});});}return;}
