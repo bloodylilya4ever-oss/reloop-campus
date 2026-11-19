@@ -296,3 +296,157 @@
     max-width: 100%;
   }
 }
+/* ==========================================
+   CAMPUS PARTNER SPOTLIGHT
+   Home page only
+========================================== */
+
+.home-cta.partner-spotlight {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.08fr)
+    minmax(0, 0.92fr);
+
+  align-items: center;
+  gap: 36px;
+
+  min-height: 360px;
+  background: #D4E5A0;
+
+  /* Preserve the existing banner shape */
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+}
+
+.partner-copy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.partner-label {
+  display: inline-block;
+  padding: 7px 12px;
+
+  border: 1px solid #637940;
+  border-radius: 100px;
+
+  color: #41521A;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.home-cta.partner-spotlight h2 {
+  max-width: 670px;
+  margin: 24px 0 18px;
+
+  font-size: clamp(32px, 3.5vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.055em;
+  overflow-wrap: anywhere;
+
+  color: #303C28;
+}
+
+.home-cta.partner-spotlight h2 i {
+  color: #61783D;
+  font-weight: 400;
+}
+
+.partner-description {
+  max-width: 560px;
+  margin-bottom: 15px;
+
+  font-size: 14px;
+  line-height: 1.75;
+  color: #455841;
+}
+
+.partner-disclaimer {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #596D45;
+  margin-bottom: 24px;
+}
+
+.partner-visual {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.partner-visual img {
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+
+  border-radius: 5px;
+}
+
+.partner-spotlight .btn {
+  position: relative;
+  z-index: 2;
+}
+
+/* Tablet */
+
+@media (max-width: 900px) {
+  .home-cta.partner-spotlight {
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    padding: 35px;
+  }
+
+  .home-cta.partner-spotlight h2 {
+    font-size: clamp(30px, 4vw, 42px);
+  }
+
+  .partner-visual img {
+    max-height: 300px;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 640px) {
+  .home-cta.partner-spotlight {
+    display: flex;
+    flex-direction: column;
+
+    align-items: stretch;
+    gap: 25px;
+
+    padding: 29px 25px;
+    min-height: auto;
+  }
+
+  .home-cta.partner-spotlight h2 {
+    font-size: clamp(30px, 8vw, 42px);
+  }
+
+  .partner-description {
+    font-size: 13px;
+  }
+
+  .partner-visual {
+    height: auto;
+  }
+
+  .partner-visual img {
+    max-height: none;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .partner-spotlight .btn {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+}
