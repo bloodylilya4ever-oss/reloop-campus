@@ -1,585 +1,702 @@
-/* RELOOP interactive educational concept — standalone client-side JavaScript.
-   All campus activity, accounts, item media and operational data are simulated.
-   No backend, payment, SSO, QR scanning, or live facilities connection. */
-(() => {
-  'use strict';
-  const KEY = 'reloop-campus-showcase-v3';
-  const BASE_ITEMS = [
-    {id:101,name:'Intro to MIS textbook',category:'Books',price:18,condition:'Good',location:'Library exchange point',seller:'Mina L.',image:'books',type:'Sell',desc:'Lightly annotated course book. Great for next semester.',status:'Available',date:1008},
-    {id:102,name:'Vintage study lamp',category:'Dorm living',price:15,condition:'Very good',location:'Student Centre',seller:'Jordan P.',image:'lamp',type:'Sell',desc:'Warm light, fully working, perfect for a small desk.',status:'Available',date:1007},
-    {id:103,name:'Canvas everyday tote',category:'Accessories',price:9,condition:'Like new',location:'North Residence',seller:'Sam K.',image:'tote',type:'Sell',desc:'Reusable canvas bag in a soft natural shade.',status:'Available',date:1006},
-    {id:104,name:'Wireless headphones',category:'Electronics',price:24,condition:'Good',location:'Library exchange point',seller:'Alex R.',image:'headphones',type:'Sell',desc:'Clean, charged and ready for a new owner.',status:'Available',date:1005},
-    {id:105,name:'Wooden desk chair',category:'Dorm living',price:35,condition:'Very good',location:'South Residence',seller:'Avery C.',image:'chair',type:'Sell',desc:'Stable, comfortable and easy to move between rooms.',status:'Available',date:1004},
-    {id:106,name:'Reusable water bottle',category:'Accessories',price:0,condition:'Good',location:'Student Centre',seller:'Taylor W.',image:'bottle',type:'Free',desc:'Stainless steel bottle, thoroughly cleaned.',status:'Available',date:1003},
-    {id:107,name:'Film camera',category:'Electronics',price:28,condition:'Used',location:'North Residence',seller:'Riley M.',image:'camera',type:'Sell',desc:'A well-loved compact film camera. Sold as seen.',status:'Available',date:1002},
-    {id:108,name:'Plant for a new room',category:'Dorm living',price:0,condition:'Good',location:'Student Centre',seller:'Jamie S.',image:'plant',type:'Donate',desc:'Healthy indoor plant looking for a new shelf.',status:'Available',date:1001},
-  ];
-  const GUIDE = {
-    paper:{heading:'Paper & cardboard',detail:'Keep dry and flatten boxes. Remove food-soiled parts where required; check the actual campus rules before placing items in a recycling bin.',place:'Example route: paper / cardboard collection point.'},
-    batteries:{heading:'Batteries',detail:'Do not put batteries in ordinary recycling or mixed waste. Use a designated battery collection or hazardous waste channel, subject to local policy.',place:'Example route: approved battery collection desk.'},
-    electronics:{heading:'Broken electronics',detail:'Repair or donate working equipment first. Send unusable electronics to an approved e-waste service; erase personal data from devices.',place:'Example route: e-waste drop-off station.'},
-    textiles:{heading:'Clothing & textiles',detail:'Clean, wearable clothing is a candidate for reuse or donation. Damaged textiles may require a separate collection route.',place:'Example route: student donation desk.'},
-    containers:{heading:'Drink containers',detail:'Empty containers and follow the campus-specific materials list. Rules vary by material and local recycling service.',place:'Example route: labelled container station.'}
-  };
-  const ART = ['books','lamp','tote','headphones','chair','bottle','camera','plant','notebooks'];
-  const $ = (s,root=document)=>root.querySelector(s);
-  const $$ = (s,root=document)=>Array.from(root.querySelectorAll(s));
-  const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const price = n => Number(n)===0 ? 'FREE' : '$'+Number(n).toFixed(0);
-  const STUDENT='demo-student', ROLE_KEY='reloop-campus-role-v1';
-  const stamp=()=>new Date().toISOString();
-  const fakeTime=(days=0)=>new Date(Date.now()-days*86400000).toISOString();
-  const seedItems=()=>structuredClone(BASE_ITEMS).map(p=>p.id===108?{...p,seller:'Alex M. · demo student',ownerId:STUDENT}:p);
-  const initialState = () => ({
-meta:{schemaVersion:4},items:seedItems(),points:65,notifications:[],
-    ledger:[{id:'L-1',title:'Verified exchange · textbook',delta:20,ownerId:STUDENT,source:'seed-101',createdAt:fakeTime(9)},{id:'L-2',title:'Verified donation · reuse desk',delta:15,ownerId:STUDENT,source:'seed-201',createdAt:fakeTime(6)},{id:'L-3',title:'Demo starting balance',delta:30,ownerId:STUDENT,source:'demo-opening',createdAt:fakeTime(14)}],
-    submissions:[{id:501,type:'Recycle',item:'Cardboard packaging',location:'North Residence Point',ownerId:STUDENT,status:'Pending',createdAt:fakeTime(1)}],
-    reservations:{},favorites:[],featured:[],featuredCredits:0,workOrders:[],reports:[{id:701,itemId:104,type:'Listing',reason:'Condition details need clarification',status:'Open',createdAt:fakeTime(2),ownerId:'sample-reporter'}],
-    auditEvents:[{id:'AUD-SEED',role:'system',action:'Seed created',object:'DEMO',outcome:'Synthetic baseline',reason:'All sample data are fictional',at:fakeTime(12)}],
-    completed:0,approved:0,nextId:800,
-  });
-  function loadState(){
-    const fresh=initialState();
-    try{
-      const old=JSON.parse(localStorage.getItem(KEY));
-      if(!old||!Array.isArray(old.items)||!Array.isArray(old.ledger)||!Array.isArray(old.submissions)||!Array.isArray(old.workOrders)||!Number.isFinite(old.points))return fresh;
-      const st={...fresh,...old};
-      st.meta={schemaVersion:4};
-      for(const k of ['favorites','featured','workOrders','reports','auditEvents','ledger','submissions','items','notifications'])if(!Array.isArray(st[k]))st[k]=fresh[k];
-      if(!st.reservations||typeof st.reservations!=='object'||Array.isArray(st.reservations))st.reservations={};
-      st.featuredCredits=Number.isInteger(st.featuredCredits)?st.featuredCredits:0;
-      st.items=st.items.map(p=>({...p,ownerId:p.ownerId||((p.seller||'').includes('You · demo')||p.id===108?STUDENT:undefined)}));
-      st.submissions=st.submissions.map(p=>({...p,ownerId:p.ownerId||STUDENT,createdAt:p.createdAt||fakeTime(2)}));
-      st.ledger=st.ledger.map((p,i)=>({...p,id:p.id||'LEGACY-'+i,ownerId:p.ownerId||STUDENT,createdAt:p.createdAt||fakeTime(3),source:p.source||'legacy'}));
-      st.workOrders=st.workOrders.map(w=>({...w,createdAt:w.createdAt||fakeTime(2)}));
-      Object.entries(st.reservations).forEach(([id,r])=>{r.ownerId=r.ownerId||STUDENT;r.createdAt=r.createdAt||fakeTime(1);});
-      if(!st.reports.length)st.reports=fresh.reports;
-      st.nextId=Math.max(Number(st.nextId)||800,800,...st.items.map(x=>Number(x.id)+1),...st.submissions.map(x=>Number(x.id)+1),...st.workOrders.map(x=>Number(x.id)+1),...st.reports.map(x=>Number(x.id)+1));
-      return st;
-    }catch(error){return fresh;}
-  }
-  let state=loadState();
-  let role=['student','staff'].includes(localStorage.getItem(ROLE_KEY))?localStorage.getItem(ROLE_KEY):'guest';
-  let route='home',category='All items',adminTab='overview',profileTab='listings',selectedArt='books',lastFocus=null,noticeTimeout;
-  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.info('Local demo persistence unavailable.');}};
-  function audit(action,object,outcome,reason=''){
-    state.auditEvents.unshift({id:'A-'+state.nextId++,role,action,object:String(object),outcome,reason,at:stamp()});
-    state.auditEvents=state.auditEvents.slice(0,120);
-  }
-  
-function addStudentNotification(title, detail, source) {
-  if (!Array.isArray(state.notifications)) {
-    state.notifications = [];
+/* RELOOP — Original mobile-first circular-campus design system.
+   RELOOP olive and lime color palette, editorial typographic rhythm.
+   Works offline with system fonts and local illustrated media. */
+:root{--paper:#FCFDF9;--cream:#F5F5ED;--mist:#E9EDDC;--lime:#E0F3AA;--accent:#D2DF6F;--olive:#41521A;--forest:#3B492B;--deep:#303C28;--ink:#10160C;--muted:#6E7465;--line:#DDE1D4;--orange:#A9683D;--white:#FFFFFF;--sans:"Inter Display",Inter,"Helvetica Neue",Arial,sans-serif;--serif:Georgia,"Times New Roman",serif;--content:1370px;--ease:cubic-bezier(.2,.65,.1,1);--shadow:0 18px 60px rgba(35,48,26,.09)}
+*,*::before,*::after{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:var(--ink);background:var(--paper);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}img,svg{max-width:100%}img{display:block}button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:inherit}button,input,select,textarea{outline-offset:3px}:focus-visible{outline:3px solid #91A84B!important;outline-offset:3px}button{border:0}.container{width:min(calc(100% - 88px),var(--content));margin-inline:auto}.skip-link{position:absolute;z-index:100;background:var(--lime);color:var(--ink);padding:10px 20px;left:-999px}.skip-link:focus{left:10px;top:10px}.view[hidden],.admin-panel[hidden],.modal-backdrop[hidden],.mobile-nav[hidden],.empty-state[hidden]{display:none!important}.view{animation:soft-in .36s var(--ease) both}@keyframes soft-in{from{opacity:.2;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.eyebrow{font-size:11px;letter-spacing:.145em;font-weight:800;text-transform:uppercase}.tiny-muted{font-size:12px;color:var(--muted)}h1,h2,h3,p{margin-top:0}h1,h2,h3{font-weight:560;letter-spacing:-.057em;line-height:1.06}h1 i,h2 i{font-family:var(--serif);font-weight:400;letter-spacing:-.066em}p{color:var(--muted)}.btn{min-height:46px;border-radius:100px;padding:11px 19px;display:inline-flex;align-items:center;justify-content:center;gap:28px;white-space:nowrap;font-weight:700;font-size:13px;letter-spacing:-.015em;transition:transform .2s var(--ease),background-color .2s,color .2s}.btn:hover{transform:translateY(-2px)}.btn:active{transform:translateY(0)}.btn span:last-child{font-size:17px;font-weight:400;line-height:1}.btn-dark{background:var(--deep);color:#fff}.btn-dark:hover{background:#51643D}.btn-lime{background:var(--lime);color:#263420}.btn-lime:hover{background:#CFEA88}.btn-outline{background:none;border:1px solid #68775F;color:var(--deep)}.btn-outline:hover{background:#EAF0E2}.btn-wide{width:100%}.inline-link{background:none;color:var(--deep);display:inline-flex;gap:22px;align-items:center;padding:5px 0;border-bottom:1px solid currentColor;font-size:13px;font-weight:700;text-align:left}.inline-link:hover{opacity:.68}.small-pill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.07em;border:1px solid #D4D8C8;border-radius:40px;padding:7px 11px;white-space:nowrap;color:#536044}.dark-inline{border-color:#3B492B}
+/* navigation */
+.demo-banner{background:var(--deep);color:#E5ECD6;font-size:10px;letter-spacing:.14em;font-weight:650}.banner-content{display:flex;gap:13px;align-items:center;min-height:34px}.banner-dot,.ops-status-dot{display:inline-block;border-radius:50%;width:7px;height:7px;background:var(--accent);flex:none}.banner-divider{opacity:.4}.banner-reset{margin-left:auto;background:none;color:#E5ECD6;border-bottom:1px solid #81906F;padding:0;font-size:10px;font-weight:700;letter-spacing:.035em}.banner-reset:hover{color:var(--lime)}.site-header{background:rgba(252,253,249,.97);position:sticky;top:0;z-index:30;border-bottom:1px solid #E7E9DF;backdrop-filter:blur(12px)}.header-inner{min-height:82px;display:flex;align-items:center;justify-content:space-between;gap:25px}.brand{display:inline-flex;align-items:center;gap:11px;color:var(--ink);background:none;font-weight:900;letter-spacing:-.08em;font-size:27px;white-space:nowrap;padding:0}.brand-period,.footer-brand span{color:#83974D}.brand-symbol{height:34px;width:34px;background:var(--deep);border-radius:50%;display:grid;place-items:center}.brand-symbol svg{width:24px;fill:none;stroke:#D4EE92;stroke-linecap:round;stroke-linejoin:round;stroke-width:3}.desktop-nav{display:flex;align-items:center;gap:30px;margin-left:auto}.nav-link{background:none;padding:12px 0;color:#66705C;font-weight:650;font-size:13px;position:relative;white-space:nowrap}.nav-link::after{content:"";height:2px;position:absolute;bottom:6px;left:0;right:100%;background:var(--olive);transition:right .22s}.nav-link:hover,.nav-link.active{color:var(--ink)}.nav-link.active::after{right:0}.nav-staff{font-size:8px;letter-spacing:.06em;color:#667148;padding:2px 4px;border:1px solid #B5BE9D;border-radius:3px;vertical-align:2px}.header-actions{display:flex;align-items:center;gap:14px}.wallet-chip{background:#F0F3E6;color:#38452E;display:flex;align-items:center;gap:6px;border-radius:50px;padding:9px 15px;font-size:13px;white-space:nowrap}.wallet-chip strong{font-size:16px}.wallet-chip>span:last-child{color:#6A7664;font-size:11px}.wallet-icon{font-size:18px;color:#637A2C}.btn-header{padding:11px 19px;gap:13px}.menu-toggle{display:none;width:42px;height:42px;background:var(--deep);border-radius:50%;align-items:center;justify-content:center;flex-direction:column;gap:5px}.menu-toggle span{width:17px;height:2px;background:white}.mobile-nav{position:absolute;left:0;right:0;top:100%;padding:10px 24px 20px;background:var(--paper);border-bottom:1px solid var(--line);box-shadow:0 20px 30px #1d2a1720}.mobile-nav button{display:flex;align-items:center;justify-content:space-between;background:none;width:100%;font-weight:700;color:var(--ink);padding:16px 2px;border-bottom:1px solid var(--line)}.mobile-nav button span{font-weight:500;color:var(--muted)}
+/* Home */
+.home-hero{display:grid;grid-template-columns:1.16fr .84fr;min-height:620px;margin-top:24px;background:var(--deep);color:#fff;border-radius:8px;overflow:hidden}.hero-copy{padding:clamp(35px,5.1vw,80px) clamp(33px,5vw,80px) 36px;display:flex;flex-direction:column;position:relative;z-index:2}.hero-index{display:flex;align-items:center;gap:12px;font-size:10px;font-weight:750;letter-spacing:.12em;color:#DCE5CD}.round-asterisk{width:29px;height:29px;border:1px solid #A5B194;border-radius:50%;display:grid;place-items:center;color:var(--lime);font-size:16px}.hero-index-num{margin-left:auto;color:#A6B394}.home-hero h1{font-size:clamp(52px,6.3vw,101px);font-weight:520;line-height:.99;letter-spacing:-.078em;margin:56px -140px 23px 0;white-space:nowrap}.home-hero h1 em{color:var(--lime)}.title-dot{color:var(--accent)}.hero-description{color:#D6DFCD;font-size:15px;line-height:1.75;max-width:455px;margin-bottom:25px}.hero-actions{display:flex;align-items:center;gap:28px;flex-wrap:wrap}.hero-text-button{background:none;color:#E3EDCF;font-size:13px;padding:11px 0;border-bottom:1px solid #AFBD97;display:flex;gap:15px;font-weight:650}.hero-text-button:hover{color:var(--lime)}.hero-bottom{margin-top:auto;padding-top:50px;font-size:11px;color:#AEBBA5;letter-spacing:.035em;display:flex;align-items:center;gap:12px}.line-mark{display:inline-block;height:1px;width:33px;background:#B1BF99}.hero-visual{position:relative;min-height:580px;background:#53683E;overflow:hidden}.hero-visual>img{height:100%;width:100%;object-fit:cover}.hero-stamp{position:absolute;right:26px;top:27px;width:111px;height:111px;border-radius:50%;background:#E0F3AA;color:var(--deep);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(12deg);box-shadow:0 0 0 6px rgba(224,243,170,.15)}.hero-stamp span{font-size:9px;letter-spacing:.11em;font-weight:850}.hero-stamp strong{font-size:37px;font-weight:400;line-height:1.1}.hero-visual-label{display:flex;position:absolute;bottom:23px;left:28px;right:28px;justify-content:space-between;gap:10px;font-size:9px;letter-spacing:.125em;color:#F2F5E9;font-weight:750}.statement-bar{background:var(--lime);overflow:hidden;margin-top:18px}.statement-inner{min-height:60px;display:flex;justify-content:space-between;align-items:center;gap:30px;white-space:nowrap;font-size:11px;font-weight:850;letter-spacing:.08em;color:#39472B}.statement-sun{font-size:29px;font-weight:400}.section{padding-top:103px;padding-bottom:108px}.section-heading{display:flex;justify-content:space-between;align-items:end;gap:34px;margin-bottom:35px}.section-heading h2{font-size:clamp(39px,4.5vw,67px);margin:16px 0 0}.section-heading h2 i{color:#62783C}.heading-aside{max-width:263px;padding-bottom:8px}.heading-aside p{font-size:14px;line-height:1.65;margin-bottom:18px}.product-grid{display:grid;gap:21px}.home-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.product-card{min-width:0}.product-image{position:relative;overflow:hidden;background:#E6EBCF;aspect-ratio:1.07/1;border-radius:5px}.product-image img{width:100%;height:100%;object-fit:cover;transition:transform .42s var(--ease)}.product-card:hover .product-image img{transform:scale(1.045)}.product-top-tag{position:absolute;top:12px;left:12px;background:#FCFDF9;padding:7px 10px;border-radius:30px;font-size:9px;letter-spacing:.045em;font-weight:800;color:#36452A}.featured-tag{background:#E0F3AA}.favorite{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:#FCFDF9;display:grid;place-items:center;color:#405337;transition:background .2s}.favorite:hover,.favorite.is-favorite{background:#DDEDA9}.favorite svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.favorite.is-favorite svg{fill:#566E32}.product-info{padding:15px 1px 2px}.product-info-upper{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.product-name{font-size:16px;font-weight:720;letter-spacing:-.037em;line-height:1.3;margin:0}.product-price{white-space:nowrap;font-size:16px;letter-spacing:-.04em;font-weight:800}.product-sub{font-size:12px;color:var(--muted);margin:6px 0 13px}.product-cta{display:flex;justify-content:space-between;align-items:center;gap:8px}.product-status{font-size:10px;color:#607350;letter-spacing:.035em;font-weight:700}.product-status.reserved{color:#AA7642}.product-status.completed{color:#A1A69B}.product-detail-btn{width:32px;height:32px;background:var(--deep);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:19px}.product-detail-btn:hover{background:#60744B}.journey-section{background:var(--cream);padding:98px 0}.journey-layout{display:grid;grid-template-columns:1fr 1.15fr;gap:9%}.journey-intro h2{font-size:clamp(42px,4.6vw,68px);margin:22px 0}.journey-intro h2 i{color:#6D803B}.journey-intro p{max-width:380px;font-size:15px;line-height:1.8;margin-bottom:27px}.journey-steps{border-top:1px solid #BCC7B0}.journey-row{padding:25px 0;display:grid;grid-template-columns:44px 1fr 30px;gap:12px;width:100%;text-align:left;background:none;color:var(--deep);border-bottom:1px solid #BCC7B0;align-items:center}.journey-row:hover{padding-left:10px;background:#EAF0E2}.journey-no{font-size:12px;color:#8B997A}.journey-row strong{display:block;font-size:21px;letter-spacing:-.045em;font-weight:670}.journey-row small{display:block;color:#687663;font-size:13px;margin-top:8px}.journey-arrow{font-size:24px;justify-self:end}.home-cta{min-height:360px;background:#D4E5A0;margin-top:92px;margin-bottom:100px;border-radius:5px;display:flex;align-items:end;justify-content:space-between;position:relative;overflow:hidden;padding:54px 65px}.home-cta h2{font-size:clamp(42px,4.6vw,68px);margin:18px 0 0}.home-cta .btn{z-index:2}.cta-orb{position:absolute;top:-85px;right:100px;font-size:330px;line-height:1;color:#BCCF85;transform:rotate(-45deg);font-weight:200;pointer-events:none;opacity:.55}
+/* Exchange */
+.page-lead{padding-top:85px;padding-bottom:52px}.marketplace-lead{display:flex;justify-content:space-between;gap:35px;align-items:end}.page-lead h1{font-size:clamp(60px,6.6vw,100px);margin:21px 0 19px}.page-lead h1 i{color:#667B3B}.page-lead p{font-size:15px;line-height:1.8;max-width:480px;margin:0}.page-lead-side{min-width:180px;display:flex;flex-direction:column;align-items:end;gap:30px}.serial{font-size:10px;letter-spacing:.1em;color:#7A856B}.lead-count{display:flex;align-items:end;gap:15px}.lead-count strong{font-size:69px;line-height:.85;letter-spacing:-.07em;font-weight:520}.lead-count span{font-size:10px;line-height:1.6;color:#6E7965;letter-spacing:.035em;font-weight:760}.marketplace-content{padding-bottom:90px}.toolbar{display:flex;align-items:center;gap:18px;padding-bottom:26px;border-bottom:1px solid #D2D7CB}.search-wrap{display:flex;align-items:center;gap:15px;background:#F3F5ED;border:1px solid #E2E7D8;padding:0 18px;border-radius:5px;flex:1;min-width:0;height:51px}.search-wrap svg{width:21px;height:21px;flex:none;fill:none;stroke:#627256;stroke-width:1.8;stroke-linecap:round}.search-wrap input{border:0;background:none;min-width:0;width:100%;font-size:13px;outline:none}.sort-wrap{display:flex;align-items:center;gap:13px}.sort-wrap label{font-size:10px;font-weight:850;letter-spacing:.1em;color:#738069;white-space:nowrap}.sort-wrap select{padding:14px;border:1px solid #DEE3D3;border-radius:5px;background:var(--paper);font-size:13px;color:var(--deep);min-width:172px}.catalog-shell{display:grid;grid-template-columns:214px minmax(0,1fr);gap:43px;padding-top:35px}.catalog-aside{align-self:start}.aside-top{display:flex;justify-content:space-between;align-items:center;padding:2px 0 18px;border-bottom:1px solid var(--line)}.aside-top>span:last-child{font-size:20px;color:#6D853F}.category-list{padding-top:9px}.category-button{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:13px 12px 13px 0;background:none;color:#727B69;width:100%;font-size:13px;font-weight:600;text-align:left}.category-button.active{color:var(--deep);font-weight:780}.category-button.active::before{content:"";height:7px;width:7px;border-radius:50%;background:#97A95C;flex:none}.category-button .count{font-size:11px;color:#9EA699;margin-left:auto}.aside-note{margin-top:58px;background:#E8EDDB;border-radius:5px;padding:23px}.aside-note strong{font-size:17px;letter-spacing:-.035em}.aside-note p{font-size:12px;line-height:1.7;margin:12px 0 27px}.aside-note>span{font-size:9px;font-weight:800;letter-spacing:.07em;color:#73854B}.catalog-meta{display:flex;justify-content:space-between;gap:10px;padding:2px 0 21px;color:#6B7566;font-size:12px}.catalog-meta span:last-child{white-space:nowrap}.legend-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#87A34C;margin-right:5px}.market-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:37px 21px}.market-grid .product-image{aspect-ratio:1.03/1}.empty-state{text-align:center;padding:85px 20px;background:#F3F5EA}.empty-symbol{font-family:var(--serif);font-size:80px;color:#788858}.empty-state h3{font-size:28px}.empty-state p{font-size:14px}.exchange-bottom{background:#DCE9BD;padding:78px 0}.exchange-bottom>.container{display:flex;justify-content:space-between;align-items:end;gap:35px}.exchange-bottom h2{font-size:clamp(38px,4.4vw,65px);margin:17px 0 0}.exchange-bottom h2 i{color:#637940}.exchange-bottom p{max-width:395px;font-size:14px;color:#455841;line-height:1.8;margin:0}
+/* Circular */
+.circular-hero{margin-top:24px;min-height:440px;background:#DFEDB1;padding:65px 75px;display:grid;grid-template-columns:1.4fr .6fr;align-items:center;gap:20px;overflow:hidden;position:relative;border-radius:5px}.circular-hero h1{font-size:clamp(60px,6vw,91px);margin:21px 0 18px}.circular-hero h1 i{color:#637B39}.circular-hero p{font-size:15px;line-height:1.7;max-width:530px;color:#506445}.circular-hero .hero-actions{margin-top:26px}.circular-orbit{width:310px;height:310px;justify-self:center;display:flex;align-items:center;justify-content:center;flex-direction:column;border:1px solid #809A51;border-radius:50%;position:relative;transform:rotate(-12deg)}.circular-orbit:after{content:"";position:absolute;inset:20px;border:1px dashed #A7B981;border-radius:50%}.orbit-symbol{font-family:var(--serif);font-size:200px;font-weight:400;color:#506B3C;line-height:1}.orbit-top,.orbit-bottom{font-size:10px;letter-spacing:.12em;font-weight:800;color:#52703D;z-index:1}.circular-options{padding-bottom:73px}.compact-heading p{max-width:270px;font-size:14px;line-height:1.7;margin:0}.action-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:19px}.action-card{text-align:left;min-height:350px;padding:29px;background:#EEF1E7;color:#334329;display:flex;flex-direction:column;align-items:flex-start;border-radius:5px;transition:transform .2s,box-shadow .2s}.action-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}.action-card-lime{background:#DAE9AE}.action-card-dark{background:var(--deep);color:#E9F2DF}.action-numeral{font-size:10px;font-weight:800;letter-spacing:.13em}.action-icon{font-size:94px;line-height:1.3;font-family:var(--serif);font-weight:400;align-self:flex-end;margin-top:9px;margin-bottom:auto;color:#789254}.action-card-lime .action-icon{color:#627D3E}.action-card-dark .action-icon{color:#B6CC83}.action-card strong{font-size:25px;letter-spacing:-.055em;font-weight:630;line-height:1.1;margin:11px 0}.action-card p{font-size:13px;max-width:270px;line-height:1.6;margin:0;color:inherit;opacity:.77}.card-end{margin-top:29px;border-bottom:1px solid currentColor;font-weight:740;font-size:12px;padding-bottom:5px}.circular-tools{display:grid;grid-template-columns:1fr 1fr;gap:26px;scroll-margin-top:130px;padding-bottom:98px}.circular-tool-left{background:#F3F4EC;padding:40px 43px;border-radius:5px}.tool-heading h2{font-size:clamp(38px,3.6vw,56px);margin:20px 0}.tool-heading h2 i{color:#647A3D}.tool-heading p{font-size:13px;max-width:360px;line-height:1.8}.guide-box{background:white;border:1px solid #DBE0D0;margin-top:28px;padding:24px}.guide-box label{display:block;font-size:10px;font-weight:850;letter-spacing:.1em;margin-bottom:12px}.guide-box select,.field input,.field select,.field textarea{width:100%;padding:14px 15px;border:1px solid #D6DDCE;border-radius:4px;color:var(--ink);background:#fff;font-size:13px;min-height:49px}.guide-result{margin-top:24px;border-left:2px solid #9CAE69;padding-left:16px}.guide-result strong{font-size:14px}.guide-result p{font-size:12px;line-height:1.7;margin:7px 0 0}.circular-tool-right{padding:40px 43px;background:#3E4C32;color:#fff;border-radius:5px}.form-top{display:flex;justify-content:space-between;gap:12px;align-items:center}.circular-tool-right .small-pill{border-color:#9CAC8C;color:#DCECCF}.circular-tool-right h3{font-size:35px;letter-spacing:-.055em;margin:26px 0 13px}.circular-tool-right>p{font-size:13px;color:#CAD9BF;line-height:1.7;margin-bottom:25px;max-width:390px}.field{margin-bottom:14px}.field label{display:block;font-size:11px;margin-bottom:8px;font-weight:690;letter-spacing:.02em}.circular-tool-right .field label{color:#E3EEDB}.field select,.field input{outline-color:#BFCF7A}.form-footnote{display:block;font-size:10px;color:#B8C6AD;margin-top:18px;letter-spacing:.025em}.wallet-section{background:var(--cream);padding:103px 0;scroll-margin-top:110px}.wallet-layout{display:grid;grid-template-columns:1fr 1fr;gap:13%}.wallet-layout h2{font-size:clamp(44px,4.6vw,67px);margin:24px 0 31px}.wallet-layout h2 i{color:#728849}.wallet-points{display:flex;gap:22px;align-items:center;border-top:1px solid #B8C7AC;border-bottom:1px solid #B8C7AC;padding:17px 0}.wallet-points>span{font-size:98px;letter-spacing:-.085em;font-weight:520;line-height:1.08;color:#3C4D29}.wallet-points strong,.wallet-points small{display:block;font-size:11px;letter-spacing:.09em}.wallet-points small{color:#78866E;font-size:9px;margin-top:5px}.wallet-copy{font-size:13px;line-height:1.75;max-width:390px;margin-top:25px}.wallet-right{padding-top:11px}.wallet-right h3{display:flex;align-items:center;justify-content:space-between;font-size:22px;letter-spacing:-.04em;margin:0 0 18px}.wallet-right h3 span{font-size:16px}.reward-option{display:flex;align-items:center;justify-content:space-between;gap:13px;padding:21px 0;border-top:1px solid #D0D6C7}.reward-option strong{font-size:14px}.reward-option p{font-size:12px;margin:5px 0 0}.reward-option button{background:var(--deep);color:#fff;padding:9px 15px;border-radius:30px;font-size:12px;font-weight:700;white-space:nowrap}.reward-option button:disabled{background:#CBD0C4;color:#7F8877;cursor:not-allowed}.ledger-title{margin-top:44px!important}.ledger-entry{display:flex;justify-content:space-between;gap:13px;align-items:center;padding:12px 0;border-top:1px solid #D4D9CD;font-size:12px}.ledger-entry span{color:#586657}.ledger-entry strong{font-size:13px}.ledger-entry .plus{color:#4F7130}.ledger-entry .minus{color:#A76B4A}
+/* Admin */
+.ops-lead{display:flex;align-items:end;justify-content:space-between;gap:30px;padding:78px 0 55px}.ops-lead h1{font-size:clamp(58px,6.3vw,95px);margin:23px 0 19px}.ops-lead h1 i{color:#688043}.ops-lead p{font-size:15px;max-width:470px;line-height:1.7;margin:0}.ops-status{font-size:10px;letter-spacing:.07em;font-weight:800;border:1px solid #D5DBC9;border-radius:50px;padding:14px 18px;max-width:270px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ops-status-dot{background:#9CB25E}.ops-status small{display:block;width:100%;font-weight:450;letter-spacing:0;color:#697360;margin-left:17px}.ops-main{padding-bottom:96px}.admin-tabs{border-bottom:1px solid #C6CEBC;display:flex;gap:30px;margin-bottom:32px;overflow:auto}.admin-tab{padding:14px 0 19px;background:none;white-space:nowrap;color:#77836B;font-size:13px;font-weight:650;border-bottom:2px solid transparent}.admin-tab.active{color:var(--deep);border-color:#3C5030;font-weight:800}.admin-tab span{background:#E7EBDA;color:#5D7046;font-size:11px;border-radius:20px;padding:3px 7px;margin-left:4px}.admin-panel:not(.active){display:none!important}.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.metric-card{background:#F1F4E9;min-height:183px;padding:22px;display:flex;flex-direction:column;position:relative;overflow:hidden}.metric-card>span:first-child{font-size:10px;font-weight:800;letter-spacing:.075em;color:#626F5A;max-width:180px}.metric-card strong{font-size:57px;line-height:1.05;font-weight:540;letter-spacing:-.07em;margin-top:21px}.metric-card small{font-size:11px;color:#7A8771;margin-top:8px}.metric-icon{position:absolute;top:18px;right:18px;color:#A1AF88;font-size:25px}.dark-metric{background:var(--deep);color:#EDF5E5}.dark-metric>span:first-child,.dark-metric small{color:#B7C7AA}.ops-panels{display:grid;grid-template-columns:1.28fr .72fr;gap:17px;margin-top:17px}.analytics-panel{background:#F5F6F0;padding:32px}.panel-heading{display:flex;justify-content:space-between;align-items:start;gap:20px}.panel-heading h3{font-size:29px;margin:15px 0}.analytics-panel>p{font-size:13px;line-height:1.7;max-width:490px}.contamination-chart{padding-top:16px}.bar-line{display:grid;grid-template-columns:148px minmax(0,1fr) 48px;gap:14px;align-items:center;margin:22px 0;font-size:12px;font-weight:650}.bar-track{height:12px;background:#E2E7D9;border-radius:0;position:relative}.bar-progress{height:100%;background:#8CA85A}.bar-progress.high{background:#C7A074}.bar-value{text-align:right;font-weight:790;font-size:14px}.analytic-foot{border-top:1px solid #D7DDCE;padding-top:19px;font-size:11px;line-height:1.7;color:#7A8673;margin-top:30px}.insight-panel{background:#E0EDB7;padding:35px;display:flex;flex-direction:column;align-items:flex-start;min-height:425px}.insight-icon{font-size:65px;margin-top:32px;color:#556C37;font-weight:200;line-height:1}.insight-panel h3{font-size:clamp(30px,2.7vw,40px);margin:24px 0 12px;max-width:345px}.insight-panel p{font-size:13px;color:#526547;line-height:1.75;margin-bottom:24px}.insight-panel small{margin-top:13px;font-size:11px;color:#657951}.workspace-heading{display:flex;justify-content:space-between;gap:25px;align-items:end;padding:25px 0 29px}.workspace-heading h2{font-size:clamp(35px,4vw,57px);margin:16px 0}.workspace-heading p{font-size:14px;margin:0;max-width:510px}.queue-list{background:#F4F6EF;border-top:1px solid var(--line)}.queue-item{padding:23px 26px;border-bottom:1px solid #DCE2D5;display:flex;align-items:center;justify-content:space-between;gap:20px}.queue-item strong{display:block;font-size:16px}.queue-item small{display:block;color:#75806C;font-size:12px;margin-top:8px}.queue-actions{display:flex;gap:9px}.queue-actions button{padding:9px 15px;border-radius:30px;font-size:12px;font-weight:780}.queue-actions .approve{background:var(--deep);color:#fff}.queue-actions .reject{border:1px solid #B9C4B1;color:#536446;background:none}.queue-empty{padding:62px 25px;text-align:center}.queue-empty h3{font-size:26px;margin:10px 0}.queue-empty p{font-size:13px}.facilities-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px}.facilities-points,.orders-panel{background:#F3F5EE;padding:30px}.point-row{display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-bottom:1px solid #D9DFD1;gap:14px}.point-row strong{display:block;font-size:14px}.point-row small{display:block;color:#798672;font-size:11px;margin-top:4px}.point-rate{font-size:20px;font-weight:760;letter-spacing:-.035em}.point-rate.high{color:#9B693A}.orders-panel h3{font-size:23px;margin:0 0 20px}.order-item{border-top:1px solid #D6DECE;padding:15px 0;display:flex;justify-content:space-between;gap:15px;align-items:center}.order-item strong{display:block;font-size:13px}.order-item small{display:block;font-size:11px;color:#7B8675;margin-top:4px}.order-item button{border:1px solid #8E9F7E;border-radius:40px;padding:8px 11px;background:none;color:#46603F;font-size:11px;font-weight:730;white-space:nowrap}.order-tag{display:inline-block;border-radius:30px;background:#E1E9CF;color:#4F643F;padding:5px 9px;font-weight:800;font-size:10px}.ops-disclaimer{font-size:11px;color:#7B8573;margin-top:23px;line-height:1.7}
+/* Footer */
+.site-footer{background:#303C28;color:#F1F5E7;padding:76px 0 27px}.footer-top{display:flex;justify-content:space-between;gap:50px;padding-bottom:90px}.footer-brand{font-size:72px;font-weight:900;letter-spacing:-.09em;line-height:1}.footer-top p{font-size:13px;color:#CAD5C2;line-height:1.7;margin:22px 0}.footer-nav{display:flex;gap:90px;padding-top:13px}.footer-nav>div{display:flex;flex-direction:column;gap:13px;align-items:flex-start}.footer-nav small{color:#9EAF91;letter-spacing:.1em;font-size:10px;margin-bottom:7px}.footer-nav button{background:none;color:#F1F4EA;padding:0;font-size:13px}.footer-nav span{font-size:13px;color:#B6C7AA}.footer-nav button:hover{text-decoration:underline}.footer-bottom{border-top:1px solid #607156;padding-top:19px;display:flex;gap:17px;justify-content:space-between;font-size:9px;letter-spacing:.05em;color:#AABB9D;flex-wrap:wrap}.footer-bottom a{text-decoration:underline;text-underline-offset:3px}
+/* Dialogs, forms, feedback */
+.modal-backdrop{position:fixed;inset:0;background:rgba(14,25,12,.66);z-index:60;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}.modal-shell{position:relative;background:var(--paper);width:min(855px,100%);max-height:min(90vh,940px);overflow-y:auto;box-shadow:0 30px 110px rgba(0,0,0,.2);border-radius:7px}.modal-close{position:sticky;top:13px;margin:13px 13px -54px auto;z-index:3;background:#E8EDD9;color:#253526;width:37px;height:37px;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:25px;font-weight:400}.modal-close:hover{background:#D8E6B6}.modal-layout{display:grid;grid-template-columns:.94fr 1.06fr;min-height:460px}.modal-photo{background:#E5E9D4;min-height:450px}.modal-photo img{width:100%;height:100%;object-fit:cover}.modal-info{padding:54px 40px 40px}.modal-info .eyebrow{color:#71815D}.modal-info h2,.modal-form h2{font-size:42px;letter-spacing:-.06em;margin:17px 0}.modal-info p{font-size:13px;line-height:1.75}.modal-price{font-size:28px;font-weight:760;margin:12px 0}.detail-list{border-top:1px solid var(--line);margin:23px 0}.detail-row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);gap:10px;font-size:12px}.detail-row span{color:#75806D}.detail-row strong{text-align:right}.modal-help{font-size:11px!important;color:#788574!important;line-height:1.7!important;margin-top:18px!important}.modal-form{padding:51px 47px 39px}.modal-form h2{font-size:46px;max-width:620px}.modal-form>p{font-size:13px;line-height:1.7;max-width:560px}.modal-fields{display:grid;grid-template-columns:1fr 1fr;gap:0 15px;margin:23px 0 9px}.modal-fields .wide{grid-column:1/-1}.field textarea{min-height:88px;resize:vertical}.modal-form .field label{color:#3B4B32}.sample-picker{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 23px}.sample-option{border:2px solid transparent;background:#EBEFE2;border-radius:4px;width:72px;height:64px;overflow:hidden;padding:0;position:relative}.sample-option img{width:100%;height:100%;object-fit:cover}.sample-option.selected{border-color:#6B8441}.sample-option.selected::after{content:"✓";position:absolute;top:3px;right:3px;background:#DCEBA9;border-radius:50%;width:18px;height:18px;font-size:13px;display:grid;place-items:center}.workflow-stages{display:flex;gap:7px;margin:20px 0;flex-wrap:wrap}.workflow-stages span{font-size:10px;padding:7px 10px;background:#EAEEDF;border-radius:40px;color:#72806A}.workflow-stages span.current{background:#D8E8A5;color:#425638;font-weight:800}.handover-qr{margin:20px 0;background:#F1F4E8;display:flex;gap:22px;align-items:center;padding:19px}.qr-simulated{width:112px;height:112px;flex:none;background:#fff;padding:10px;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);gap:2px}.qr-simulated b{background:#30432D}.qr-simulated b.off{background:#fff}.handover-qr p{font-size:12px}.handover-qr strong{font-size:13px;display:block}.step-buttons{display:grid;grid-template-columns:1fr 1fr;gap:11px}.step-buttons button{padding:13px;border:1px solid #9FB28F;background:#EDF3E4;color:#425B38;font-weight:720;font-size:12px}.step-buttons button.done{background:#D7E9AB;border-color:#97AD6A}.step-buttons button:disabled{opacity:.5;cursor:not-allowed}.toast{position:fixed;bottom:24px;right:24px;z-index:100;max-width:410px;color:#F6F9F2;background:#303E2C;border-left:4px solid #D9EC99;padding:16px 20px;box-shadow:var(--shadow);font-size:13px;line-height:1.5;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .24s,transform .24s}.toast.show{opacity:1;transform:translateY(0)}.muted-note{font-size:12px!important;color:#839079!important}.form-error{display:block;font-size:12px;color:#A35237;margin-top:8px}.status-note{padding:12px 14px;background:#E8F1DA;font-size:12px;line-height:1.7;color:#4F613E;margin:15px 0}.is-locked{opacity:.62;pointer-events:none}
+/* responsive */
+@media(max-width:1240px){.container{width:min(calc(100% - 60px),var(--content))}.desktop-nav{gap:18px}.header-actions{gap:8px}.btn-header{padding:10px 13px}.hero-copy{padding-left:48px;padding-right:30px}.home-hero h1{font-size:clamp(55px,6.2vw,83px)}.hero-visual{min-height:550px}.market-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1050px){.desktop-nav{display:none}.menu-toggle{display:flex}.home-hero{grid-template-columns:1fr .82fr;min-height:540px}.home-hero h1{font-size:clamp(52px,6.2vw,76px);margin-top:35px}.hero-visual{min-height:540px}.hero-stamp{width:83px;height:83px}.hero-stamp strong{font-size:27px}.hero-stamp span{font-size:7px}.statement-inner{gap:15px;font-size:9px}.home-grid{grid-template-columns:repeat(2,1fr)}.catalog-shell{grid-template-columns:170px minmax(0,1fr);gap:26px}.market-grid{grid-template-columns:repeat(2,1fr)}.circular-hero{padding:54px}.circular-orbit{width:235px;height:235px}.orbit-symbol{font-size:145px}.action-card{padding:22px}.action-card strong{font-size:22px}.metrics-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){.container{width:calc(100% - 40px)}.header-inner{min-height:69px}.brand{font-size:24px}.home-hero{grid-template-columns:1fr;min-height:unset}.hero-copy{padding:46px 34px 30px}.home-hero h1{font-size:clamp(60px,9.8vw,88px);white-space:normal;letter-spacing:-.078em;margin:33px 0 22px}.hero-bottom{padding-top:40px}.hero-visual{height:320px;min-height:0}.hero-visual>img{object-position:50% 46%}.hero-stamp{top:20px}.statement-inner{overflow:hidden;justify-content:flex-start;width:max-content;min-width:100%;gap:35px}.section{padding-top:72px;padding-bottom:75px}.section-heading{align-items:start;gap:15px}.section-heading h2{font-size:clamp(36px,5.5vw,57px)}.heading-aside{max-width:220px}.journey-layout{grid-template-columns:1fr;gap:40px}.journey-section{padding:69px 0}.home-cta{margin:66px auto;padding:34px;min-height:340px;align-items:start;flex-direction:column;gap:30px}.page-lead{padding-top:58px}.page-lead h1{font-size:clamp(55px,7.7vw,82px)}.circular-hero{grid-template-columns:1fr;padding:44px}.circular-orbit{position:absolute;right:-80px;bottom:-110px;opacity:.2;pointer-events:none}.circular-options .section-heading{flex-direction:column}.compact-heading p{max-width:440px}.action-card-grid{grid-template-columns:repeat(3,1fr);gap:11px}.action-card{min-height:300px;padding:17px}.action-card strong{font-size:19px}.action-icon{font-size:69px}.action-card p{font-size:12px}.circular-tools,.wallet-layout,.ops-panels,.facilities-layout{grid-template-columns:1fr}.wallet-layout{gap:45px}.ops-status{display:none}.ops-lead{padding-top:60px}}
+@media(max-width:600px){.container{width:calc(100% - 32px)}.demo-banner{font-size:8px}.banner-content{gap:7px;min-height:30px}.banner-content>span:nth-of-type(2){display:none}.banner-divider{display:none}.banner-reset{font-size:9px}.header-inner{min-height:62px}.brand{font-size:21px}.brand-symbol{width:29px;height:29px}.brand-symbol svg{width:20px}.btn-header{display:none}.header-actions{gap:9px}.wallet-chip{padding:8px 10px;font-size:11px}.wallet-chip strong{font-size:13px}.wallet-icon{font-size:14px}.menu-toggle{width:37px;height:37px}.home-hero{margin-top:12px}.hero-copy{padding:31px 23px 26px}.hero-index{font-size:8px;gap:8px}.round-asterisk{height:23px;width:23px}.hero-index-num{display:none}.home-hero h1{font-size:clamp(49px,11.4vw,72px);line-height:1.04;margin:28px 0 22px}.hero-description{font-size:13px;line-height:1.7}.hero-actions{gap:16px}.hero-actions .btn{padding-inline:16px;font-size:12px}.hero-text-button{font-size:12px}.hero-bottom{font-size:10px;padding-top:30px}.hero-visual{height:295px}.hero-visual-label{font-size:8px;left:17px;right:17px;bottom:14px}.hero-stamp{width:78px;height:78px;right:17px;top:15px}.statement-bar{margin-top:11px}.statement-inner{min-height:48px;font-size:9px}.section{padding-top:65px;padding-bottom:66px}.section-heading{flex-direction:column;gap:17px}.section-heading h2{font-size:46px;margin:16px 0 0}.heading-aside{max-width:100%}.heading-aside p{font-size:13px;margin-bottom:10px}.home-grid{gap:12px}.product-image{aspect-ratio:1/1}.product-top-tag{font-size:8px;top:7px;left:7px;padding:5px 7px}.favorite{width:29px;height:29px;top:7px;right:7px}.product-info{padding-top:11px}.product-name,.product-price{font-size:13px}.product-sub{font-size:10px;line-height:1.4;min-height:29px}.product-detail-btn{width:29px;height:29px}.journey-section{padding:65px 0}.journey-intro h2{font-size:44px}.journey-intro p{font-size:13px}.journey-row{grid-template-columns:25px 1fr 20px;gap:8px;padding:20px 0}.journey-row strong{font-size:18px}.journey-row small{font-size:11px}.home-cta{padding:29px 25px;min-height:330px;margin:60px auto}.home-cta h2{font-size:42px}.cta-orb{right:-70px}.footer-top{flex-direction:column;padding-bottom:48px;gap:35px}.footer-brand{font-size:58px}.footer-nav{gap:28px;flex-wrap:wrap}.footer-bottom{gap:12px;font-size:8px}.page-lead{padding-top:45px;padding-bottom:32px}.marketplace-lead{flex-direction:column;align-items:start;gap:20px}.page-lead h1{font-size:62px}.page-lead p{font-size:13px}.page-lead-side{width:100%;flex-direction:row;align-items:center;justify-content:space-between;gap:10px}.page-lead-side .serial,.lead-count{display:none}.toolbar{flex-direction:column;align-items:stretch;gap:13px}.search-wrap{height:48px;flex:none}.sort-wrap{justify-content:space-between}.sort-wrap select{min-width:180px}.catalog-shell{display:block;padding-top:19px}.catalog-aside{display:block}.aside-top,.aside-note{display:none}.category-list{display:flex;gap:7px;overflow-x:auto;padding:0 0 17px;scrollbar-width:none}.category-list::-webkit-scrollbar{display:none}.category-button{padding:8px 14px;border:1px solid #D7DFCE;border-radius:50px;white-space:nowrap;width:auto;font-size:11px}.category-button.active{background:#DCEEB0;border-color:#DCEEB0}.category-button.active::before{display:none}.category-button .count{display:none}.catalog-meta{font-size:10px;padding-bottom:16px}.catalog-meta span:last-child{display:none}.market-grid{gap:27px 12px}.market-grid .product-image{aspect-ratio:1/1}.exchange-bottom{padding:57px 0}.exchange-bottom>.container{flex-direction:column;align-items:start;gap:20px}.exchange-bottom h2{font-size:42px}.exchange-bottom p{font-size:13px}.circular-hero{margin-top:12px;padding:42px 24px;min-height:440px}.circular-hero h1{font-size:55px}.circular-hero p{font-size:13px}.circular-options{padding-bottom:45px}.action-card-grid{grid-template-columns:1fr}.action-card{min-height:208px;padding:23px;position:relative}.action-card .action-icon{position:absolute;right:20px;top:22px;margin:0;font-size:80px;opacity:.7}.action-card strong{font-size:25px;margin-top:43px}.action-card p{max-width:270px;font-size:12px}.card-end{margin-top:20px}.circular-tools{gap:16px;padding-bottom:68px}.circular-tool-left,.circular-tool-right{padding:29px 24px}.tool-heading h2{font-size:43px}.circular-tool-right h3{font-size:30px}.form-top{align-items:start;flex-direction:column}.wallet-section{padding:72px 0}.wallet-layout h2{font-size:49px}.wallet-points>span{font-size:84px}.ops-lead{padding:46px 0 34px}.ops-lead h1{font-size:57px}.ops-lead p{font-size:13px}.admin-tabs{gap:21px}.admin-tab{font-size:12px}.metrics-grid{gap:10px}.metric-card{padding:16px;min-height:155px}.metric-card strong{font-size:46px}.metric-card>span:first-child{font-size:9px}.metric-card small{font-size:10px}.metric-icon{font-size:19px;right:11px}.analytics-panel,.insight-panel,.facilities-points,.orders-panel{padding:23px}.panel-heading{flex-direction:column;gap:8px}.panel-heading h3{font-size:26px}.bar-line{grid-template-columns:97px minmax(0,1fr) 40px;gap:9px;font-size:11px}.insight-panel{min-height:350px}.insight-panel h3{font-size:34px}.workspace-heading{flex-direction:column;align-items:flex-start}.workspace-heading h2{font-size:39px}.queue-item{padding:20px;align-items:flex-start;flex-direction:column}.queue-actions{width:100%}.queue-actions button{flex:1}.modal-backdrop{padding:10px}.modal-shell{max-height:92vh}.modal-layout{grid-template-columns:1fr}.modal-photo{min-height:0;height:250px}.modal-info{padding:26px 23px 32px}.modal-info h2{font-size:34px}.modal-form{padding:38px 23px 26px}.modal-form h2{font-size:36px}.modal-fields{grid-template-columns:1fr}.modal-fields .wide{grid-column:1}.modal-close{margin:8px 8px -45px auto}.handover-qr{gap:12px}.qr-simulated{width:88px;height:88px;gap:1px}.step-buttons{grid-template-columns:1fr}.toast{bottom:14px;right:14px;left:14px;max-width:none}}
+@media(max-width:375px){.home-hero h1{font-size:44px}.hero-actions{align-items:flex-start;flex-direction:column}.hero-visual{height:252px}.section-heading h2{font-size:39px}.page-lead h1{font-size:53px}.circular-hero h1{font-size:50px}.product-price{font-size:12px}.product-name{font-size:12px}.metric-card strong{font-size:40px}.wallet-points>span{font-size:72px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* ===== RELOOP Dual Portal extension (retains original design tokens) ===== */
+[hidden]{display:none!important}
+.role-banner{margin-left:auto;color:#D9EF9A;font-weight:800;letter-spacing:.06em}.role-switch{border:1px solid #B7C3A0;background:none;border-radius:40px;color:var(--deep);padding:9px 12px;font-size:11px;font-weight:800;white-space:nowrap}.role-switch:hover{background:var(--lime)}.portal-selector{padding-top:67px;padding-bottom:73px}.portal-selector-head{display:flex;justify-content:space-between;align-items:end;gap:30px;margin-bottom:26px}.portal-selector h2{font-size:clamp(34px,4vw,61px);margin:11px 0 0}.portal-selector h2 i{color:var(--olive)}.portal-selector-head>p{max-width:370px;font-size:14px;line-height:1.7;margin:0}.portal-selector-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.portal-choice{border:0;text-align:left;display:flex;flex-direction:column;position:relative;overflow:hidden;min-height:345px;padding:32px 35px;border-radius:7px;transition:transform .2s var(--ease)}.portal-choice:hover{transform:translateY(-3px)}.portal-choice:active{transform:translateY(0)}.student-choice{background:#E0F3AA;color:var(--deep)}.staff-choice{background:var(--deep);color:white}.portal-choice-top{font-size:10px;letter-spacing:.13em;font-weight:850;display:flex;justify-content:space-between;position:relative;z-index:2}.portal-choice-top span{font-size:19px}.portal-choice-mark{position:absolute;right:25px;top:51px;font-size:162px;font-weight:300;line-height:1;color:inherit;opacity:.13;pointer-events:none}.portal-choice strong{font-weight:570;letter-spacing:-.066em;font-size:clamp(34px,3.6vw,55px);line-height:1.07;margin:39px 0 12px;position:relative;z-index:2}.portal-choice-desc{font-size:13px;max-width:320px;line-height:1.6;opacity:.77}.portal-choice-cta{border-top:1px solid currentColor;display:block;margin-top:auto;padding-top:17px;font-size:12px;letter-spacing:.035em;font-weight:800}.student-wrap,.profile-wrap{padding-top:65px;padding-bottom:95px}.portal-page-head{display:flex;justify-content:space-between;align-items:end;gap:34px}.portal-page-head h1,.profile-hero h1{font-size:clamp(49px,6vw,84px);margin:18px 0 20px}.portal-page-head h1 i,.profile-hero h1 i{color:var(--olive)}.portal-page-head p,.profile-hero p{font-size:14px;max-width:440px}.persona-card{display:flex;align-items:center;gap:13px;background:#F2F5E9;border:1px solid var(--line);padding:16px 20px;min-width:324px}.persona-avatar,.profile-avatar{width:52px;height:52px;background:var(--lime);display:grid;place-items:center;font-weight:850;color:var(--deep);border-radius:50%;font-size:15px;flex:none}.persona-card span:nth-child(2){display:flex;flex-direction:column;gap:5px}.persona-card small{font-size:9px;color:var(--muted);letter-spacing:.04em}.persona-card .inline-link{margin-left:auto;font-size:12px;gap:5px}.student-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:43px}.student-kpis button{background:#E9EEDD;text-align:left;border:1px solid #DCE5D0;padding:22px 25px;display:flex;flex-direction:column;min-height:174px}.student-kpis button:nth-child(1){background:var(--deep);color:white}.student-kpis button:nth-child(1) small{color:#E0F3AA}.student-kpis span{font-size:10px;font-weight:800;letter-spacing:.12em}.student-kpis strong{font-size:59px;font-weight:570;letter-spacing:-.07em;line-height:1.2;margin:9px 0}.student-kpis small{margin-top:auto;font-size:12px;color:#536548}.student-home-grid{display:grid;grid-template-columns:1.35fr .75fr;gap:20px;margin-top:30px}.student-main-card{background:var(--lime);padding:34px;min-width:0}.student-activity-card{background:#F4F5EB;padding:34px;min-width:0}.section-microhead{display:flex;justify-content:space-between;align-items:center;gap:12px}.section-microhead>span:last-child{font-size:10px;font-weight:800;color:#718058}.student-main-card h2{font-size:clamp(34px,4vw,55px);margin:28px 0 28px}.student-main-card h2 i{color:#5B783D}.quick-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.quick-action-grid button{min-height:137px;padding:16px;background:#FAFCF0;border:1px solid #C5D4AA;display:flex;flex-direction:column;align-items:flex-start;text-align:left}.quick-icon{font-size:23px;margin-bottom:auto}.quick-action-grid strong{font-size:15px}.quick-action-grid small{font-size:11px;color:var(--muted);margin-top:4px}.student-activity-card .inline-link{font-size:11px}.activity-line{padding:16px 0;border-bottom:1px solid var(--line);display:flex;gap:12px}.activity-bullet{height:24px;width:24px;border-radius:50%;display:grid;place-items:center;background:#DEEABA;flex:none}.activity-line strong{display:block;font-size:13px;line-height:1.4}.activity-line small{display:block;color:var(--muted);font-size:11px;margin-top:6px;line-height:1.5}.student-lower-note{margin-top:25px;border-top:1px solid var(--line);padding-top:20px;font-size:13px;color:var(--muted)}.student-lower-note span{font-size:10px;letter-spacing:.1em;font-weight:850;margin-right:20px;color:var(--deep)}.profile-hero{background:var(--deep);color:white;padding:44px;display:flex;gap:27px;align-items:center;min-height:315px}.profile-hero .profile-avatar{height:100px;width:100px;font-size:28px;align-self:flex-start}.profile-hero h1{font-size:clamp(40px,4.5vw,64px);margin:13px 0 13px}.profile-hero h1 i{color:var(--lime)}.profile-hero p{color:#DBE4D1;margin:0}.profile-hero-points{margin-left:auto;border-left:1px solid #788769;padding-left:30px;min-width:160px;align-self:stretch;display:flex;flex-direction:column;justify-content:center}.profile-hero-points strong{font-size:66px;font-weight:520;letter-spacing:-.07em}.profile-hero-points span{font-size:10px;letter-spacing:.12em;color:#CDDFB3}.profile-hero-points button{background:none;border:0;color:var(--lime);padding:15px 0;text-align:left;font-size:12px;font-weight:700}.profile-tabs{display:flex;gap:9px;overflow-x:auto;padding:26px 0 22px;border-bottom:1px solid var(--line)}.profile-tabs button{white-space:nowrap;padding:11px 17px;border-radius:30px;background:#E9EEE2;color:#485640;font-weight:720;font-size:12px}.profile-tabs button.active{background:var(--deep);color:#fff}.profile-panel{padding:30px 0;min-height:300px}.profile-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:20px}.profile-panel-heading h2{font-size:38px;margin:0}.profile-list{display:grid;gap:12px}.profile-record{padding:20px;background:#F5F7EF;border:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;align-items:center}.profile-record strong{font-size:15px}.profile-record p{font-size:12px;margin:7px 0 0}.profile-record-side{text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end}.profile-record-side button,.staff-record-actions button{border:1px solid #C5D2B5;background:white;font-size:11px;padding:8px 12px;font-weight:780;color:var(--deep)}.state-pill{display:inline-flex;border-radius:30px;background:#E0EAC9;padding:5px 9px;font-size:10px;font-weight:800;color:#415329}.state-pill.pending{background:#F3E8CC;color:#7E631D}.state-pill.rejected,.state-pill.disputed{background:#F5DFD4;color:#8F442E}.state-pill.completed,.state-pill.approved,.state-pill.resolved{background:#DDECC9;color:#345B30}.state-pill.available{background:#DDECC9}.state-pill.reserved{background:#E9E1C5}.profile-privacy,.policy-footnote{padding:17px 0;border-top:1px solid var(--line);font-size:11px;line-height:1.6;color:#6F7B68;letter-spacing:.02em}
+/* Staff layout: dense tasks, same editorial palette. */
+.staff-frame{display:grid;grid-template-columns:234px minmax(0,1fr);gap:0;max-width:1650px;margin:0 auto;min-height:calc(100vh - 118px)}.staff-sidebar{background:#E9EEE2;padding:31px 16px 38px;min-width:0;border-right:1px solid #D6DCCB}.staff-sidebar-top{display:flex;flex-direction:column;align-items:flex-start;padding:12px 12px 27px}.staff-mono{font-size:10px;letter-spacing:.1em;color:#5C6E50;font-weight:800}.staff-portrait{height:49px;width:49px;border-radius:50%;display:grid;place-items:center;background:var(--deep);color:var(--lime);font-weight:850;margin:21px 0 12px}.staff-sidebar-top strong{font-size:18px}.staff-sidebar-top small{color:#6F7E65;font-size:9px;margin-top:5px;letter-spacing:.08em}.staff-side-nav{display:grid;gap:5px}.staff-side-nav button{background:transparent;border:0;width:100%;text-align:left;display:flex;gap:11px;padding:13px 14px;font-size:12px;font-weight:750;color:#455D3B;border-radius:4px;align-items:center}.staff-side-nav button.active,.staff-side-nav button:hover{background:var(--deep);color:#fff}.staff-side-nav button span{line-height:1.3}.staff-sidebar-note{font-size:11px;line-height:1.6;border-top:1px solid #C9D5BE;padding:25px 12px 0;margin-top:32px}.staff-content{min-width:0;padding:0 26px 40px}.staff-content>.container{width:100%;max-width:none;margin:0}.staff-content .ops-lead{padding:47px 0 28px}.staff-content .ops-lead h1{font-size:clamp(46px,4.1vw,67px)}.staff-content .ops-main{padding-bottom:0}.staff-content .admin-tabs{overflow-x:auto;gap:15px}.staff-content .admin-tab{white-space:nowrap;font-size:11px}.staff-record-list{display:grid;gap:11px}.staff-record{display:flex;justify-content:space-between;gap:24px;align-items:center;border:1px solid var(--line);background:#F7F8F1;padding:20px}.staff-record strong{font-size:15px}.staff-record p{font-size:12px;margin:8px 0 0;line-height:1.5}.staff-record small{font-size:10px;color:#6B7B62;display:block;margin-top:7px}.staff-record-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.staff-record-actions button:hover,.profile-record-side button:hover{background:var(--lime)}.staff-record-actions button.primary{background:var(--deep);color:white;border-color:var(--deep)}.staff-record-actions button.danger{color:#904C34;border-color:#CBAD9E}.staff-filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}.staff-filters label{font-size:11px;display:flex;gap:8px;align-items:center;font-weight:800}.staff-filters select{border:1px solid var(--line);padding:9px 12px;background:white;color:var(--deep)}.target-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:27px}.target-card{background:#F2F5EB;border:1px solid var(--line);padding:24px;min-height:150px}.target-card span{display:block;font-size:10px;letter-spacing:.07em;font-weight:800;color:#6A785F}.target-card strong{display:block;font-size:24px;line-height:1.1;margin:14px 0 7px;letter-spacing:-.03em}.target-card small{font-size:11px;color:#5F6E58}.sustainability-callout{background:var(--lime);display:flex;gap:25px;align-items:end;padding:30px}.sustainability-callout>div{flex:1}.sustainability-callout h3{font-size:34px;margin:14px 0}.sustainability-callout p{max-width:640px;margin-bottom:0;font-size:13px}.sustainability-callout .btn{flex:none}.audit-entry{display:flex;flex-wrap:wrap;gap:7px;align-items:baseline}.audit-entry small{font-variant-numeric:tabular-nums}.staff-content .ops-disclaimer{font-size:11px}
+@media(max-width:1150px){.staff-frame{grid-template-columns:196px minmax(0,1fr)}.staff-content{padding-inline:18px}.staff-side-nav button{font-size:11px}.staff-sidebar{padding-inline:9px}.persona-card{min-width:0}}
+@media(max-width:900px){.student-home-grid{grid-template-columns:1fr}.staff-frame{display:block}.staff-sidebar{padding:15px 18px}.staff-sidebar-top{display:none}.staff-side-nav{display:flex;overflow-x:auto;gap:7px;scrollbar-width:thin}.staff-side-nav button{white-space:nowrap;width:auto;flex:none}.staff-side-nav button span{white-space:nowrap}.staff-sidebar-note{display:none}.staff-content{padding:0 20px 35px}.portal-page-head{align-items:start;flex-direction:column}.persona-card{width:100%}.profile-hero{flex-wrap:wrap}.profile-hero-points{margin-left:0}.target-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.role-banner{display:none}.role-switch{font-size:10px;padding:8px 9px}.portal-selector{padding-top:49px;padding-bottom:56px}.portal-selector-head{flex-direction:column;align-items:flex-start}.portal-selector-grid{grid-template-columns:1fr}.portal-choice{min-height:300px;padding:27px}.portal-choice strong{font-size:43px;margin-top:26px}.student-wrap,.profile-wrap{padding-top:43px;padding-bottom:55px}.portal-page-head h1{font-size:54px}.student-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:26px}.student-kpis button{min-height:130px;padding:16px}.student-kpis button:first-child{grid-column:1/-1}.student-kpis strong{font-size:44px}.student-main-card,.student-activity-card{padding:23px}.student-main-card h2{font-size:40px}.quick-action-grid button{min-height:126px;padding:13px}.quick-action-grid strong{font-size:13px}.profile-hero{padding:24px;gap:17px}.profile-hero .profile-avatar{height:61px;width:61px;font-size:16px}.profile-hero h1{font-size:40px}.profile-hero-points{width:100%;border-left:0;border-top:1px solid #788769;padding:13px 0 0}.profile-hero-points strong{font-size:46px}.profile-tabs{gap:6px}.profile-tabs button{font-size:11px;padding:10px 12px}.profile-panel-heading h2{font-size:31px}.profile-record,.staff-record{flex-direction:column;align-items:stretch;gap:12px}.profile-record-side{align-items:flex-start;text-align:left}.staff-record-actions{justify-content:flex-start}.staff-content{padding-inline:16px}.staff-content .ops-lead h1{font-size:50px}.staff-content .admin-tabs{gap:13px}.target-grid{grid-template-columns:1fr}.target-card{min-height:120px}.sustainability-callout{padding:23px;display:block}.sustainability-callout h3{font-size:28px}.sustainability-callout .btn{margin-top:18px}.staff-side-nav button{padding:10px 12px}}
+@media(max-width:600px){.header-inner{gap:9px}.wallet-chip{display:none!important}.header-actions{gap:6px}.role-switch{max-width:104px;overflow:hidden;text-overflow:ellipsis}}
+
+/* RELOOP portal selection dialog */
+.portal-dialog {
+  padding: 50px 36px 34px;
+}
+
+.portal-dialog h2 {
+  font-size: clamp(34px, 4vw, 52px);
+  margin: 14px 0;
+}
+
+.portal-dialog > p {
+  font-size: 13px;
+  line-height: 1.7;
+  max-width: 540px;
+  margin-bottom: 24px;
+}
+
+.portal-dialog .portal-choice {
+  min-height: 255px;
+  padding: 25px;
+}
+
+.portal-dialog .portal-choice strong {
+  font-size: clamp(30px, 3vw, 43px);
+  margin: 32px 0 12px;
+}
+
+@media (max-width: 600px) {
+  .portal-dialog {
+    padding: 50px 20px 24px;
   }
 
-  if (state.notifications.some(n => n.source === source)) return;
+  .portal-dialog .portal-selector-grid {
+    grid-template-columns: 1fr;
+  }
 
-  state.notifications.unshift({
-    id: 'N-' + state.nextId++,
-    source,
-    title,
-    detail,
-    createdAt: stamp(),
-    read: false
-  });
-
-  state.notifications = state.notifications.slice(0, 40);
-  save();
+  .portal-dialog .portal-choice {
+    min-height: 185px;
+  }
+}
+#view-home > .portal-selector {
+  display: none;
+}
+/* Preserve RELOOP button text color on iOS Safari */
+.quick-action-grid button {
+  color: var(--ink);
 }
 
 
-function renderNotifications() {
-  const notifications = Array.isArray(state.notifications)
-    ? state.notifications
-    : [];
+/* RELOOP onboarding — scoped to the existing shared modal; no other modal/layout changed. */
+.modal-shell.onboarding-active {
+  width:min(980px,calc(100vw - 40px));
+  max-height:90vh;
+  max-height:90dvh;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scroll-behavior:smooth;
+  border-radius:12px;
+}
+.modal-shell.onboarding-active .modal-close {
+  position:sticky;
+  top:12px;
+  margin:12px 12px -49px auto;
+  box-shadow:0 4px 18px rgba(33,49,29,.10);
+}
+.onboarding-dialog{padding:36px 32px 0;}
+.onboarding-intro {display:grid;grid-template-columns:1.04fr .96fr;align-items:center;gap:26px;min-height:365px;padding:20px 8px 18px;}
+.onboarding-copy {min-width:0;padding:10px 0;}
+.onboarding-copy .eyebrow {color:var(--olive);}
+.onboarding-dialog .onboarding-copy h2 {font-size:clamp(35px,4.2vw,62px);line-height:1.03;margin:20px 0 22px;letter-spacing:-.065em;}
+.onboarding-dialog .onboarding-copy h2 i {font-family:var(--serif);color:var(--olive);font-weight:400;}
+.onboarding-dialog .onboarding-copy p {font-size:14px;line-height:1.7;max-width:450px;margin:0 0 25px;color:#626D5D;}
+.onboarding-art {background:#E9EEDC;border-radius:9px;overflow:hidden;aspect-ratio:1.12/1;align-self:stretch;min-height:260px;}
+.onboarding-art img {width:100%;height:100%;object-fit:cover;object-position:center;}
+.onboarding-highlights {display:flex;gap:8px;flex-wrap:wrap;}
+.onboarding-highlights span {display:inline-flex;align-items:center;gap:7px;border:1px solid #CDD6C0;border-radius:30px;padding:8px 11px;color:#53683C;background:#F6F8EE;font-size:11px;line-height:1.25;}
+.onboarding-highlights b {font-weight:650;}
+.onboarding-start {background:var(--lime);border-radius:9px;min-height:132px;padding:26px 32px;margin:12px 0 44px;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+.onboarding-start .eyebrow{color:#54653F;}
+.onboarding-start h3{font-size:clamp(27px,3vw,38px);margin:8px 0 0;}
+.onboarding-start .btn{flex:none;}
+.onboarding-roles{scroll-margin-top:24px;padding:0 0 12px;}
+.onboarding-roles>.eyebrow{color:var(--olive);}
+.onboarding-roles h3{font-size:clamp(35px,4.4vw,52px);margin:12px 0;}
+.onboarding-roles h3 i{font-family:var(--serif);font-weight:400;color:var(--olive);}
+.onboarding-roles>p{max-width:570px;line-height:1.65;font-size:13px;margin:0 0 23px;}
+.onboarding-role-grid{gap:18px;}
+.onboarding-dialog .onboarding-role-grid .portal-choice {padding:22px 24px 24px;min-height:420px;align-items:stretch;}
+.onboarding-dialog .onboarding-role-grid .portal-choice:hover{transform:translateY(-3px);}
+.onboarding-avatar {height:182px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;margin:12px 0 2px;border-radius:6px;}
+.student-choice .onboarding-avatar{background:rgba(255,255,255,.35);}
+.staff-choice .onboarding-avatar{background:rgba(224,243,170,.08);}
+.onboarding-avatar img{height:100%;width:auto;max-width:100%;object-fit:contain;object-position:center bottom;}
+.onboarding-dialog .onboarding-role-grid .portal-choice strong {font-size:clamp(28px,3vw,39px);margin:10px 0 7px;line-height:1.13;}
+.onboarding-dialog .onboarding-role-grid .portal-choice-desc{max-width:355px;font-size:12px;line-height:1.55;margin-bottom:16px;}
+.onboarding-dialog .onboarding-role-grid .portal-choice-cta{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:13px;}
+.onboarding-footnote{font-size:10px!important;letter-spacing:.1em;color:#78836D;text-align:center;padding:25px 0 20px;margin:0!important;}
+@media (max-width:700px){
+  .modal-shell.onboarding-active{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:9px;}
+  .onboarding-dialog{padding:39px 18px 0;}
+  .onboarding-intro{grid-template-columns:1fr;gap:10px;padding:9px 0 10px;}
+  .onboarding-dialog .onboarding-copy h2{font-size:clamp(34px,9vw,49px);margin:16px 0;}
+  .onboarding-art{aspect-ratio:1.65/1;min-height:0;}
+  .onboarding-start{padding:23px 20px;margin:18px 0 38px;flex-direction:column;align-items:flex-start;gap:14px;}
+  .onboarding-start .btn{width:100%;}
+  .onboarding-dialog .onboarding-role-grid{grid-template-columns:1fr;}
+  .onboarding-dialog .onboarding-role-grid .portal-choice{min-height:330px;padding:20px;}
+  .onboarding-avatar{height:155px;margin:8px 0 3px;}
+  .onboarding-dialog .onboarding-role-grid .portal-choice strong{font-size:32px;margin:7px 0;}
+}
+@media (prefers-reduced-motion: reduce){
+  .modal-shell.onboarding-active{scroll-behavior:auto;}
+  .onboarding-dialog .portal-choice{transition:none;}
+  .onboarding-dialog .portal-choice:hover{transform:none;}
+}
 
-  const unreadNotifications = notifications.filter(n => !n.read);
-  const hasUnread = unreadNotifications.length > 0;
+/* ==========================================
+   RELOOP ONBOARDING — RESPONSIVE LAYOUT FIX
+   ========================================== */
 
-  // Update notification dots
-  $$('.notification-dot').forEach(dot => {
-    dot.hidden = !hasUnread || role !== 'student';
-  });
+/* 1. Only allow vertical scrolling inside onboarding */
+.modal-shell.onboarding-active {
+  width: min(980px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
 
-  const list = $('#student-notifications-list');
-  if (!list) return;
+/* 2. Prevent inner content from stretching the modal */
+.onboarding-dialog {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
 
-  const section = list.closest('.student-notifications');
+.onboarding-dialog *,
+.onboarding-dialog *::before,
+.onboarding-dialog *::after {
+  box-sizing: border-box;
+}
 
-  // Hide the whole section when all notifications are read
-  if (section) section.hidden = !hasUnread;
+.onboarding-intro,
+.onboarding-copy,
+.onboarding-art,
+.onboarding-start,
+.onboarding-roles {
+  min-width: 0;
+  max-width: 100%;
+}
 
-  // Render each unread notification with its own button
- 
-list.innerHTML = unreadNotifications.map(n => {
-  const isWalletNotification =
-    n.title === 'Exchange completed' ||
-    n.title === 'Circular action approved';
+/* 3. Balanced text and image columns */
+.onboarding-intro {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: center;
+  gap: clamp(16px, 2.5vw, 28px);
+  min-height: 0;
+}
 
-  return `
-    <div class="student-notification-row">
-      <div class="notification-content">
-        <strong>${escapeHTML(n.title)}</strong>
-        <small>${escapeHTML(n.detail)}</small>
+/* 4. Respect the original image's 16:9 proportions */
+.onboarding-art {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 1500 / 844;
+  align-self: center;
+  overflow: hidden;
+}
 
-        ${isWalletNotification ? `
-          <button
-            type="button"
-            class="notification-wallet-link"
-            data-nav="circular"
-            data-jump="wallet">
-            View my wallet ↗&#xFE0E;
-          </button>
-        ` : ''}
-      </div>
+.onboarding-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center;
+}
 
-      <button
-        type="button"
-        class="notification-read-btn"
-        data-read-notification="${escapeHTML(String(n.id))}">
-        Mark as read
-      </button>
-    </div>
-  `;
-}).join('');
+/* 5. Allow text and feature labels to wrap */
+.onboarding-copy h2,
+.onboarding-roles h3,
+.onboarding-start h3 {
+  overflow-wrap: break-word;
+}
+
+.onboarding-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+/* 6. Prevent role cards from overflowing */
+.onboarding-role-grid {
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  max-width: 100%;
+}
+
+.onboarding-role-grid .portal-choice {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.onboarding-role-grid .portal-choice-desc {
+  overflow-wrap: anywhere;
+}
+
+/* 7. Keep the CTA flexible */
+.onboarding-start > div {
+  min-width: 0;
+}
+
+/* Tablet and smaller desktop windows */
+@media (max-width: 850px) {
+  .onboarding-intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .onboarding-art {
+    width: 100%;
+    max-width: 620px;
+    justify-self: center;
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 700px) {
+  .modal-shell.onboarding-active {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+
+  .onboarding-intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .onboarding-art {
+    aspect-ratio: 1500 / 844;
+    min-height: 0;
+  }
+
+  .onboarding-role-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .onboarding-start {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .onboarding-start .btn {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+/* ==========================================
+   CAMPUS PARTNER SPOTLIGHT
+   Home page only
+========================================== */
+
+.home-cta.partner-spotlight {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.08fr)
+    minmax(0, 0.92fr);
+
+  align-items: center;
+  gap: 36px;
+
+  min-height: 360px;
+  background: #D4E5A0;
+
+  /* Preserve the existing banner shape */
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+}
+
+.partner-copy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.partner-label {
+  display: inline-block;
+  padding: 7px 12px;
+
+  border: 1px solid #637940;
+  border-radius: 100px;
+
+  color: #41521A;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.home-cta.partner-spotlight h2 {
+  max-width: 670px;
+  margin: 24px 0 18px;
+
+  font-size: clamp(32px, 3.5vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.055em;
+  overflow-wrap: anywhere;
+
+  color: #303C28;
+}
+
+.home-cta.partner-spotlight h2 i {
+  color: #61783D;
+  font-weight: 400;
+}
+
+.partner-description {
+  max-width: 560px;
+  margin-bottom: 15px;
+
+  font-size: 14px;
+  line-height: 1.75;
+  color: #455841;
+}
+
+.partner-disclaimer {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #596D45;
+  margin-bottom: 24px;
+}
+
+.partner-visual {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.partner-visual img {
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+
+  border-radius: 5px;
+}
+
+.partner-spotlight .btn {
+  position: relative;
+  z-index: 2;
+}
+
+/* Tablet */
+
+@media (max-width: 900px) {
+  .home-cta.partner-spotlight {
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    padding: 35px;
+  }
+
+  .home-cta.partner-spotlight h2 {
+    font-size: clamp(30px, 4vw, 42px);
+  }
+
+  .partner-visual img {
+    max-height: 300px;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 640px) {
+  .home-cta.partner-spotlight {
+    display: flex;
+    flex-direction: column;
+
+    align-items: stretch;
+    gap: 25px;
+
+    padding: 29px 25px;
+    min-height: auto;
+  }
+
+  .home-cta.partner-spotlight h2 {
+    font-size: clamp(30px, 8vw, 42px);
+  }
+
+  .partner-description {
+    font-size: 13px;
+  }
+
+  .partner-visual {
+    height: auto;
+  }
+
+  .partner-visual img {
+    max-height: none;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .partner-spotlight .btn {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+/* Partner advertisement: responsive image */
+.partner-visual {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.partner-image-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.partner-ad-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.partner-swipe-hint {
+  display: none;
+}
+
+/* Mobile: horizontal swipe within the image */
+@media (max-width: 700px) {
+  .partner-image-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+  }
+
+  .partner-ad-image {
+    width: 600px;
+    min-width: 600px;
+    max-width: none;
+    height: auto;
+  }
+
+  .partner-swipe-hint {
+    display: block;
+    margin: 8px 0 0;
+    font-size: 12px;
+    text-align: center;
+    opacity: 0.7;
+  }
+}
+/* Student notifications */
+.notification-dot:not([hidden]) {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #D93B40;
+  box-shadow: 0 0 0 2px var(--paper);
+  flex: none;
+}
+
+.nav-my-home .notification-dot {
+  position: absolute;
+  top: 7px;
+  right: -12px;
+}
+
+.mobile-my-home .notification-dot {
+  margin-left: auto;
+  margin-right: 10px;
+}
+
+.student-notifications {
+  margin: 0 0 28px;
+  padding: 23px 27px;
+  background: #F1F4E8;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.student-notification-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+
+.student-notification-row {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.student-notification-row strong {
+  display: block;
+  font-size: 13px;
+  color: var(--deep);
+}
+
+.student-notification-row small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.student-notification-row .notification-new {
+  flex: none;
+  font-size: 9px;
+  letter-spacing: .07em;
+  font-weight: 800;
+  color: #A12B32;
+}
+
+.student-notifications .muted-note {
+  margin: 0;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .student-notifications {
+    padding: 18px 16px;
+  }
+
+  .student-notification-row {
+    flex-wrap: wrap;
+  }
+
+  .nav-my-home .notification-dot {
+    right: -9px;
+  }
+}
+
+/* Individual notification read buttons */
+
+.student-notifications[hidden] {
+  display: none !important;
+}
+
+.student-notification-row {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-read-btn {
+  flex: none;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--deep);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.notification-read-btn:hover {
+  background: #E0E8CE;
+}
+
+@media (max-width: 640px) {
+  .student-notification-row {
+    align-items: flex-start;
+  }
+
+  .notification-read-btn {
+    margin-top: 4px;
+  }
+}
+
+/* Wallet shortcut inside points notifications */
+.notification-wallet-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--deep);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.notification-wallet-link:hover {
+  opacity: 0.7;
 }
 
 
 
-function markNotificationRead(id) {
-  if (role !== 'student') return;
-
-  const notification = Array.isArray(state.notifications)
-    ? state.notifications.find(n => String(n.id) === String(id))
-    : null;
-
-  if (!notification) return;
-
-  notification.read = true;
-
-  save();
-  renderNotifications();
+/* ===== Product-detail rewards discovery (only inside item modal) ===== */
+.detail-savings { margin-top: 20px; padding: 14px 0 2px; border-top: 1px solid var(--line); min-width: 0; }
+.detail-savings-teaser { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.detail-savings-teaser > img { width: 66px; height: 66px; flex: 0 0 66px; background: #EDF1DF; border-radius: 6px; object-fit: cover; }
+.detail-savings-teaser-copy { min-width: 0; flex: 1; }
+.detail-savings-teaser-copy > strong { display: block; color: var(--deep); font-size: 15px; line-height: 1.3; letter-spacing: -.025em; }
+.detail-savings-teaser-copy p { margin: 3px 0 4px; color: #6B775F; font-size: 12px; line-height: 1.5; }
+.detail-savings-toggle, .detail-savings-card-action { padding: 3px 0; color: #4B682F; background: transparent; border: 0; border-bottom: 1px solid #9BAB76; font-size: 12px; font-weight: 780; text-align: left; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+.detail-savings-toggle:hover, .detail-savings-card-action:hover { color: #263C21; border-color: currentColor; }
+.detail-savings-panel { margin-top: 15px; min-width: 0; }
+.detail-savings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 11px; }
+.detail-savings-card { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; background: #E1F0C1; border: 1px solid #CADFA5; padding: 16px; border-radius: 6px; }
+.detail-savings-friends { background: #F1F3E9; border-color: #D7E0CC; }
+.detail-savings-kicker { font-size: 9px; letter-spacing: .095em; font-weight: 850; color: #607348; }
+.detail-savings-card h3 { margin: 3px 0 0; font-size: 20px; line-height: 1.17; letter-spacing: -.047em; font-weight: 710; color: var(--deep); }
+.modal-info .detail-savings-card p { font-size: 12px; line-height: 1.55; color: #546349; margin: 0 0 8px; }
+.detail-savings-card-action { margin-top: auto; }
+.detail-savings-invite { min-width: 0; margin-top: 12px; padding: 16px; border: 1px solid #C8D8B5; border-radius: 6px; background: #F3F6EC; }
+.detail-savings-invite-layout { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 13px; margin-top: 12px; align-items: start; }
+.detail-savings-share-fields { min-width: 0; }
+.modal-info .detail-savings-share-fields p { margin: 0 0 8px; font-size: 12px; color: var(--deep); }
+.detail-savings-share-fields label { display: block; margin-bottom: 5px; font-size: 11px; font-weight: 750; color: #526747; }
+.detail-savings-share-fields input { display: block; width: 100%; min-width: 0; border: 1px solid #BDCCAB; background: #FFF; color: #243525; border-radius: 4px; padding: 10px 9px; font-size: 11px; }
+.detail-savings-copy, .detail-savings-simulate { display: inline-flex; align-items: center; gap: 9px; min-height: 36px; border: 0; border-radius: 100px; padding: 8px 14px; background: var(--deep); color: #FFF; font-size: 12px; font-weight: 750; line-height: 1.3; margin-top: 9px; text-align: center; justify-content: center; }
+.detail-savings-copy:hover, .detail-savings-simulate:hover:not(:disabled) { background: #566B3C; }
+.detail-savings-copy-status { display: block; font-size: 11px; min-height: 1.7em; color: #456733; margin-top: 7px; }
+.detail-savings-qr { width: 176px; max-width: 100%; background: #FFF; border: 1px solid #D3DDC9; padding: 7px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.detail-savings-qr img { width: 160px; height: 160px; max-width: 100%; object-fit: contain; background: white; }
+.detail-savings-qr small { font-size: 9px; color: #637355; text-align: center; }
+.modal-info .detail-savings-demo-note { color: #697761; font-size: 10px; line-height: 1.65; margin: 10px 0 0; }
+.detail-savings-simulate { margin-top: 10px; white-space: normal; }
+.detail-savings-simulate:disabled { background: #DBE3D1; color: #52614D; cursor: not-allowed; }
+/* Keep original modal width until the user expands the two reward options. */
+.modal-shell:has(.detail-savings-panel:not([hidden])) { width: min(1140px, calc(100vw - 40px)); }
+/* Use zero-minimum grid tracks to keep the item's image from widening the photo column. */
+.modal-shell:has(.detail-savings-panel:not([hidden])) .modal-layout { grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr); }
+.modal-shell:has(.detail-savings-panel:not([hidden])) .modal-photo { min-width: 0; overflow: hidden; }
+@media (max-width: 700px) {
+  .modal-shell:has(.detail-savings-panel:not([hidden])) { width: 100%; }
+  .modal-shell:has(.detail-savings-panel:not([hidden])) .modal-layout { grid-template-columns: minmax(0, 1fr); }
+  .detail-savings-invite-layout { grid-template-columns: 1fr; }
+  .detail-savings-qr { width: fit-content; }
+  .detail-savings-card h3 { font-size: 19px; }
 }
-
-  
-  function hasRole(r){return role===r;}
-  function roleGate(required){if(hasRole(required))return true;announce('Please enter the '+required+' demo portal to use that action.');return false;}
-  function chooseRole(next){if(!['student','staff'].includes(next))return;role=next;try{localStorage.setItem(ROLE_KEY,role);}catch(e){}closeModal();refreshRole();navigate(next==='staff'?'operations':'exchange');announce('You are now viewing the '+next+' demo portal.');}
-  function exitRole(){role='guest';try{localStorage.removeItem(ROLE_KEY);}catch(e){}closeModal();refreshRole();navigate('home', false);announce('Demo role cleared. Shared sample records are retained.');}
-  function refreshRole(){
-    $$('[data-student-only]').forEach(el=>el.hidden=role!=='student');
-    $$('[data-staff-only]').forEach(el=>el.hidden=role!=='staff');
-    $('#switch-portal').hidden=role==='guest';
-    $('#role-banner').textContent=role==='guest'?'GUEST / SELECT A PORTAL':role.toUpperCase()+' DEMO · CLIENT-SIDE ROLE';
-    document.body.dataset.role=role;
-    renderNotifications();
-  }
-  function showPortalChoice() {
-    const template = $('#portal-role-template');
-    if (!template) return;
-    openModal(`
-      <div class="portal-dialog onboarding-dialog">
-        <section class="onboarding-intro" aria-labelledby="modal-heading">
-          <div class="onboarding-copy">
-            <span class="eyebrow">RELOOP CAMPUS</span>
-            <h2 id="modal-heading">What is<br><i>Reloop?</i></h2>
-            <p>Reloop is a second-hand trading website at the university. In addition to the main second-hand trading page, it also has an incentive mechanism for earning rewards and post exposure through environmental activities on campus. OUr keywords as follows:</p>
-            <div class="onboarding-highlights" aria-label="What ReLoop offers">
-              <span>Exchange &amp; Reuse</span>
-              <span>Repair &amp; Recycle</span>
-              <span>Earn Rewards</span>
-              <span>Campus Sustainability</span>
-            </div>
-            <p><br> Give useful things another life. Exchange with students, repair or recycle responsibly, and earn points for verified actions. Campus staff help keep it all moving.</p>
-          </div>
-          <div class="onboarding-art">
-            <img src="assets/onboarding-campus.webp" alt="Illustration of students exchanging books, repairing items and sorting recyclable materials on campus" width="1500" height="844">
-          </div>
-        </section>
-        <section class="onboarding-start" aria-labelledby="onboarding-start-title">
-          <div>
-            <span class="eyebrow">01 / FROM A SMALL ACTION</span>
-            <h3 id="onboarding-start-title">Ready to make an impact?</h3>
-          </div>
-          <button type="button" class="btn btn-dark" data-onboarding-start="true">Get Started <span aria-hidden="true">↓</span></button>
-        </section>
-        <section class="onboarding-roles" id="onboarding-role-section" aria-labelledby="onboarding-role-title">
-          <span class="eyebrow">02 / CHOOSE YOUR PORTAL</span>
-          <h3 id="onboarding-role-title" tabindex="-1">How will you <i>take part?</i></h3>
-          ${template.innerHTML}
-        </section>
-        <p class="onboarding-footnote">EDUCATIONAL PROTOTYPE / ALL USERS, EVENTS AND REWARDS ARE SIMULATED.</p>
-      </div>
-    `);
-    $('#modal-shell').classList.add('onboarding-active');
-    $('#modal-shell').scrollTop = 0;
-  }
-
-  function paint(){renderProducts();renderWallet();renderAdmin();renderStudent();renderProfile();renderStaffExtra();renderNotifications();$('#global-points').textContent=state.points;$('#listing-count').textContent=String(state.items.filter(x=>x.status!=='Removed').length).padStart(2,'0');}
-  function navigate(where, addHistory = true){
-    const allowed=['home','student','profile','exchange','circular','operations'];if(!allowed.includes(where))where='home';
-    if(where==='operations'&&role!=='staff'){announce('Staff workspace is available only in Staff Demo.');where=role==='student'?'student':'home';}
-    if(['student','profile','exchange','circular'].includes(where)&&role!=='student'){announce('Enter Student Demo to explore the student features.');where=role==='staff'?'operations':'home';}
-    route=where;$$('.view').forEach(v=>{const show=v.id==='view-'+where;v.hidden=!show;v.classList.toggle('active',show);});
-    $$('.nav-link').forEach(b=>b.classList.toggle('active',b.dataset.nav===where));
-    $('#mobile-nav').hidden=true;$('#menu-toggle').setAttribute('aria-expanded','false');
-    
-try {
-  const nextHash = '#' + where;
-
-  if (location.hash !== nextHash) {
-    if (addHistory) {
-      // 用户主动点击导航：增加历史记录
-      history.pushState({ where }, '', nextHash);
-    } else {
-      // 页面恢复：不增加额外历史记录
-      history.replaceState({ where }, '', nextHash);
-    }
-  }
-} catch (e) {
-  console.warn('Navigation history update failed:', e);
+@media (prefers-reduced-motion: reduce) {
+  .detail-savings *, .detail-savings *::before, .detail-savings *::after { transition: none !important; animation: none !important; }
 }
-
-    window.scrollTo({top:0,behavior:'instant'});paint();
-    const heading=$('#view-'+where+' h1');if(heading){heading.setAttribute('tabindex','-1');heading.focus({preventScroll:true});}
-  }
-  function announce(message){const toast=$('#toast');toast.textContent=message;toast.classList.add('show');clearTimeout(noticeTimeout);noticeTimeout=setTimeout(()=>toast.classList.remove('show'),3700);}
-  function imageFor(item){return 'assets/'+encodeURIComponent(ART.includes(item.image)?item.image:'books')+'.svg';}
-  const categories=['All items','Books','Dorm living','Electronics','Accessories','Free & Donate'];
-  const heartSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 9.4c0 4-8.5 10-8.5 10S3.5 13.4 3.5 9.4a4.4 4.4 0 0 1 8.5-1.4 4.4 4.4 0 0 1 8.5 1.4Z"/></svg>';
-  function productCard(p){
-    const favorite=state.favorites.includes(p.id);
-    const featuredAllowed=state.featured.includes(p.id)&&state.items.filter(x=>x.category===p.category&&x.status==='Available').length>=10;
-    return `<article class="product-card"><div class="product-image"><img src="${imageFor(p)}" loading="lazy" alt="Illustrated demo image of ${escapeHTML(p.name)}" width="600" height="520"><span class="product-top-tag ${featuredAllowed?'featured-tag':''}">${featuredAllowed?'FEATURED · REWARD':escapeHTML(p.type==='Sell'?p.condition:p.type)}</span><button class="favorite ${favorite?'is-favorite':''}" type="button" data-favorite="${p.id}" aria-label="${favorite?'Remove from saved items':'Save item'}: ${escapeHTML(p.name)}" aria-pressed="${favorite}">${heartSVG}</button></div><div class="product-info"><div class="product-info-upper"><h3 class="product-name">${escapeHTML(p.name)}</h3><span class="product-price">${price(p.price)}</span></div><p class="product-sub">${escapeHTML(p.category)} · ${escapeHTML(p.location)}</p><div class="product-cta"><span class="product-status ${escapeHTML(p.status.toLowerCase().replace(/\s+/g,'-'))}">● ${escapeHTML(p.status)}</span><button class="product-detail-btn" type="button" data-detail="${p.id}" aria-label="View details of ${escapeHTML(p.name)}">↗&#xFE0E;</button></div></div></article>`;
-  }
-  function filteredItems(){const q=$('#market-search').value.trim().toLocaleLowerCase();const s=$('#market-sort').value;let arr=state.items.filter(item=>!['Pending review','Rejected','Removed','Disputed'].includes(item.status)&&(category==='All items'||(category==='Free & Donate'?(item.type!=='Sell'):item.category===category))&&`${item.name} ${item.category} ${item.location}`.toLocaleLowerCase().includes(q));
-    if(s==='low')arr.sort((a,b)=>a.price-b.price);else if(s==='high')arr.sort((a,b)=>b.price-a.price);else arr.sort((a,b)=>b.date-a.date);
-    return arr;
-  }
-  function renderProducts(){
-    $('#home-products').innerHTML=state.items.filter(p=>p.status==='Available').slice(0,4).map(productCard).join('');
-    $('#category-list').innerHTML=categories.map(c=>{let count=state.items.filter(p=>!['Pending review','Rejected','Removed','Disputed'].includes(p.status)&&(c==='All items'||(c==='Free & Donate'?p.type!=='Sell':p.category===c))).length;return `<button type="button" class="category-button ${c===category?'active':''}" data-category="${escapeHTML(c)}" aria-pressed="${c===category}">${escapeHTML(c)} <span class="count">${count.toString().padStart(2,'0')}</span></button>`;}).join('');
-    const arr=filteredItems();$('#market-products').innerHTML=arr.map(productCard).join('');$('#market-empty').hidden=arr.length>0;$('#results-summary').textContent=`${arr.length} item${arr.length===1?'':'s'} · ${category==='All items'?'All campus listings':category}`;
-  }
-  function renderGuide(){const g=GUIDE[$('#sort-guide').value];$('#guide-result').innerHTML=`<strong>${escapeHTML(g.heading)} →</strong><p>${escapeHTML(g.detail)}</p><p><b>${escapeHTML(g.place)}</b></p>`;}
-  const REWARDS=[{title:'Featured listing credit',cost:40,description:'Stored demo credit. Actual placement requires a category with ≥10 matching listings to respect the 10% cap.'},{title:'Campus partner voucher',cost:80,description:'Illustrative digital reward — not a real voucher.'}];
-  function renderWallet(){
-    $('#wallet-points').textContent=state.points;
-    $('#rewards-list').innerHTML=REWARDS.map((r,i)=>`<div class="reward-option"><div><strong>${escapeHTML(r.title)}</strong><p>${r.cost} pts · ${escapeHTML(r.description)}${i===0?` · ${state.featuredCredits} stored credit(s)`:``}</p></div><button type="button" data-redeem="${i}" ${state.points<r.cost?'disabled':''}>Redeem ↗&#xFE0E;</button></div>`).join('');
-    $('#ledger-list').innerHTML=state.ledger.slice(0,5).map(l=>`<div class="ledger-entry"><span>${escapeHTML(l.title)}</span><strong class="${l.delta>=0?'plus':'minus'}">${l.delta>=0?'+':''}${l.delta} pts</strong></div>`).join('');
-  }
-  function createOrder(title='Review North Residence recycling signage',point='North Residence'){
-    if(!roleGate('staff'))return;
-    if(state.workOrders.some(w=>w.title.trim().toLowerCase()===title.trim().toLowerCase()&&w.point===point&&w.status!=='Resolved')){announce('A matching demo work order is already open.');return;}
-    const w={id:state.nextId++,title,point,status:'Open',createdAt:stamp(),updatedAt:stamp()};state.workOrders.unshift(w);audit('Work order created','WO-'+w.id,'Open',title);save();paint();announce('Demo work order created.');
-  }
-  function renderAdmin(){
-    const pending=state.submissions.filter(s=>s.status==='Pending');
-    $('#stat-exchanges').textContent=128+state.completed;$('#stat-exchanges').nextElementSibling.textContent=`Synthetic baseline 128 + ${state.completed} new demo exchanges`;
-    $('#stat-actions').textContent=36+state.approved;$('#stat-actions').nextElementSibling.textContent=`Synthetic baseline 36 + ${state.approved} demo approvals`;
-    $('#stat-pending').textContent=pending.length;
-    $('#queue-tab-count').textContent=pending.length;
-    $('#pending-pill').textContent=pending.length+' PENDING';
-    $('#stat-workorders').textContent=state.workOrders.filter(w=>w.status!=='Resolved').length;
-    const bars=[{name:'North Residence',rate:24,count:24,sample:100},{name:'South Residence',rate:11,count:11,sample:100},{name:'Science Building',rate:14,count:14,sample:100}];
-    $('#contamination-chart').innerHTML=bars.map(b=>`<div class="bar-line"><span>${b.name}</span><div class="bar-track" role="meter" aria-label="${b.name} synthetic contamination" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${b.rate}"><div class="bar-progress ${b.rate>=20?'high':''}" style="width:${b.rate}%"></div></div><span class="bar-value">${b.rate}%</span></div>`).join('');
-    $('#facilities-points').innerHTML='<h3 style="font-size:22px;margin:0 0 20px">Collection points · synthetic sample</h3>'+bars.map(b=>`<div class="point-row"><div><strong>${escapeHTML(b.name)}</strong><small>${b.count} incorrectly sorted / ${b.sample} audited · synthetic</small></div><div class="point-rate ${b.rate>=20?'high':''}">${b.rate}%</div></div>`).join('');
-    const locations=[...new Set(state.submissions.map(s=>s.location))];
-    $('#verification-list').innerHTML=`<div class="staff-filters"><label for="verification-status">STATUS <select id="verification-status"><option value="Pending">Pending</option><option value="All">All statuses</option><option value="Approved">Approved</option><option value="Rejected">Rejected</option></select></label><label for="verification-type">TYPE <select id="verification-type"><option value="All">All types</option><option>Recycle</option><option>Donate</option><option>Repair</option></select></label><label for="verification-location">LOCATION <select id="verification-location"><option value="All">All points</option>${locations.map(p=>`<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`).join('')}</select></label></div><div id="verification-rows"></div>`;
-    renderVerificationRows();
-    $('#work-order-list').innerHTML=state.workOrders.length?state.workOrders.map(w=>`<div class="order-item"><div><strong>${escapeHTML(w.title)}</strong><small>${escapeHTML(w.point)} · WO-${w.id} · ${escapeHTML(w.status)}</small></div>${w.status==='Open'?`<button type="button" data-resolve="${w.id}">Mark resolved</button>`:'<span class="order-tag">RESOLVED</span>'}</div>`).join(''):'<p class="muted-note">No demo work orders yet. Create one to test the workflow.</p>';
-    const openNorth=state.workOrders.some(w=>w.point==='North Residence'&&w.status==='Open');$('#insight-order-status').textContent=openNorth?'✓ Demo work order is open':'Recommended follow-up';
-  }
-  function renderVerificationRows(){
-    const status=$('#verification-status')?.value||'Pending',type=$('#verification-type')?.value||'All',location=$('#verification-location')?.value||'All';
-    const arr=state.submissions.filter(s=>(status==='All'||s.status===status)&&(type==='All'||s.type===type)&&(location==='All'||s.location===location));
-    $('#verification-rows').innerHTML=arr.length?arr.map(s=>`<div class="queue-item"><div><strong>${escapeHTML(s.type)} · ${escapeHTML(s.item)}</strong><small>${escapeHTML(s.location)} · CA-${s.id} · ${escapeHTML(s.status)} · ${friendlyDate(s.createdAt)}</small>${s.reviewReason?`<p class="record-reason">Decision note: ${escapeHTML(s.reviewReason)}</p>`:''}</div><div class="queue-actions">${s.status==='Pending'?`<button type="button" class="approve" data-review-submission="${s.id}">Review submission ↗&#xFE0E;</button>`:`<span class="state-pill ${s.status.toLowerCase()}">${escapeHTML(s.status)}</span>`}</div></div>`).join(''):'<div class="queue-empty"><h3>Nothing in this view.</h3><p>Adjust the filters or submit a circular action as the demo student.</p></div>';
-  }
-  function setAdminTab(tab){
-    if(!['overview','verification','moderation','facilities','sustainability','audit'].includes(tab))tab='overview';
-    adminTab=tab;$$('[data-admin-tab]').forEach(b=>{const on=b.dataset.adminTab===tab;b.classList.toggle('active',on);b.setAttribute('aria-selected',String(on));});
-    $$('.admin-panel').forEach(p=>{const on=p.id==='admin-'+tab;p.hidden=!on;p.classList.toggle('active',on);});
-    if(tab==='verification')renderVerificationRows();
-  }
-  function openModal(content){lastFocus=document.activeElement;$('#modal-body').innerHTML=content;$('#modal-backdrop').hidden=false;document.body.style.overflow='hidden';$('#modal-close').focus();}
-  function closeModal(){if($('#modal-backdrop').hidden)return;$('#modal-backdrop').hidden=true;$('#modal-shell').classList.remove('onboarding-active');$('#modal-body').innerHTML='';document.body.style.overflow='';if(lastFocus?.isConnected)lastFocus.focus();}
-  function showDetail(id){
-    if(!roleGate('student'))return;const p=state.items.find(x=>x.id===id);if(!p)return;
-    const r=state.reservations[p.id];let action='';
-    if(p.status==='Available'&&p.ownerId!==STUDENT)action=`<button class="btn btn-dark btn-wide" type="button" data-start-reserve="${p.id}">Reserve this item for 24h ↗&#xFE0E;</button>`;
-    else if(p.status==='Available'&&p.ownerId===STUDENT)action='<div class="status-note">This is your own demo listing. You can view its status in My Profile.</div>';
-    else if(p.status==='Reserved'&&r)action=`<button class="btn btn-dark btn-wide" type="button" data-handover="${p.id}">${r.stage==='pending'?'Simulate seller response':'Open handover confirmation'} ↗&#xFE0E;</button>`;
-    else action='<div class="status-note">This listing cannot be newly reserved in the current demo state.</div>';
-    openModal(`<div class="modal-layout"><div class="modal-photo"><img src="${imageFor(p)}" alt="Illustrated sample item ${escapeHTML(p.name)}" width="600" height="520"></div><div class="modal-info"><span class="eyebrow">CAMPUS EXCHANGE / ITEM #${p.id}</span><h2 id="modal-heading">${escapeHTML(p.name)}</h2><div class="modal-price">${price(p.price)}</div><p>${escapeHTML(p.desc)}</p><div class="detail-list"><div class="detail-row"><span>Condition</span><strong>${escapeHTML(p.condition)}</strong></div><div class="detail-row"><span>Exchange type</span><strong>${escapeHTML(p.type)}</strong></div><div class="detail-row"><span>Handover point</span><strong>${escapeHTML(p.location)}</strong></div><div class="detail-row"><span>Listed by</span><strong>${escapeHTML(p.seller)} · demo persona</strong></div><div class="detail-row"><span>Status</span><strong>${escapeHTML(p.status)}</strong></div></div>${action}
-<button type="button" class="inline-link report-trigger" data-report-item="${p.id}">Report a concern ↗&#xFE0E;</button>
-
-
-
-<p class="modal-help">
-Educational simulation. No real payment, authentication or scan. Handover rules and staff moderation are conceptual unless demonstrated.</p></div></div>`);
-  }
-  function reserveForm(id){const p=state.items.find(x=>x.id===id);if(!p||p.status!=='Available')return;
-    openModal(`<div class="modal-form"><span class="eyebrow">EXCHANGE / RESERVATION</span><h2 id="modal-heading">Set up your handover.</h2><p>You are reserving <strong>${escapeHTML(p.name)}</strong>. Proposed policy: 24-hour hold; seller replies within 12 hours. This demo simulates the process locally.</p><form id="reservation-form" data-item="${id}"><div class="modal-fields"><div class="field"><label for="reserve-method">Handover method</label><select id="reserve-method" required><option value="Designated exchange point">Designated exchange point</option><option value="Campus cabinet">Campus cabinet (proposed)</option></select></div><div class="field"><label for="reserve-time">Available time window</label><select id="reserve-time" required><option>Tomorrow · 10:00–12:00</option><option>Tomorrow · 14:00–16:00</option><option>Friday · 16:00–18:00</option></select></div></div><button class="btn btn-dark btn-wide" type="submit">Confirm demo reservation <span>↗&#xFE0E;</span></button></form><p class="modal-help">No live booking or cabinet service is connected.</p></div>`);
-  }
-  function simulatedQR(){let cells='';for(let i=0;i<81;i++){const x=i%9,y=Math.floor(i/9);const black=((x<3&&y<3)||(x>5&&y<3)||(x<3&&y>5))?(x===0||x===2||y===0||y===2||(x>5&&x===6)||(x>5&&x===8)||(y>5&&y===6)||(y>5&&y===8)):((x*13+y*7+x*y)%4<2);cells+=`<b class="${black?'':'off'}"></b>`;}return cells;}
-  function showHandover(id){const p=state.items.find(x=>x.id===id),r=state.reservations[id];if(!p||!r)return;let accepted=r.stage!=='pending';const seller=r.sellerScan===true,buyer=r.buyerScan===true;
-    openModal(`<div class="modal-form"><span class="eyebrow">EXCHANGE / VERIFIED HANDOVER</span><h2 id="modal-heading">${accepted?'Ready to hand over.':'Waiting for the seller.'}</h2><p>${escapeHTML(p.name)} · ${escapeHTML(r.method)} · ${escapeHTML(r.time)}. Each demo QR token is linked to one reservation and cannot be reused after completion.</p><div class="workflow-stages"><span>01 RESERVE ✓</span><span class="${accepted?'':'current'}">02 SELLER ACCEPTANCE ${accepted?'✓':'·'}</span><span class="${accepted?'current':''}">03 TWO-SIDED CONFIRMATION</span></div>${!accepted?`<div class="status-note">In a real system the seller would respond within 12 hours. Use the button below to simulate acceptance.</div><button class="btn btn-dark btn-wide" type="button" data-accept-seller="${id}">Simulate seller acceptance <span>↗&#xFE0E;</span></button>`:`<div class="handover-qr"><div class="qr-simulated" aria-label="Decorative simulated code, not a scannable QR code">${simulatedQR()}</div><div><strong>DEMO HANDOVER TOKEN</strong><p>Not a real QR code. Press each confirmation below to simulate separate scans by both parties.</p></div></div><div class="step-buttons"><button type="button" class="${seller?'done':''}" data-scan="seller" data-scan-item="${id}" ${seller?'disabled':''}>${seller?'✓ Seller confirmed':'Simulate seller scan'}</button><button type="button" class="${buyer?'done':''}" data-scan="buyer" data-scan-item="${id}" ${buyer?'disabled':''}>${buyer?'✓ Buyer confirmed':'Simulate buyer scan'}</button></div><button class="btn btn-dark btn-wide" style="margin-top:18px" type="button" data-complete="${id}" ${!seller||!buyer?'disabled':''}>Complete verified demo exchange <span>↗&#xFE0E;</span></button>`}<p class="modal-help">Both confirmations are required. One confirmation alone never completes the exchange.</p></div>`);
-  }
-  function showPost(){selectedArt='books';openModal(`<div class="modal-form"><span class="eyebrow">EXCHANGE / NEW LISTING</span><h2 id="modal-heading">Give something a new chapter.</h2><p>Post a sample listing for the demo campus market. Choose an illustration instead of uploading a real item photo.</p><form id="post-form"><div class="modal-fields"><div class="field wide"><label for="post-title">Item title *</label><input type="text" id="post-title" placeholder="e.g. Second-hand desk organizer" maxlength="65" required></div><div class="field"><label for="post-category">Category *</label><select id="post-category" required><option>Books</option><option>Dorm living</option><option>Electronics</option><option>Accessories</option></select></div><div class="field"><label for="post-type">Listing type *</label><select id="post-type"><option>Sell</option><option>Free</option><option>Donate</option></select></div><div class="field"><label for="post-condition">Condition *</label><select id="post-condition"><option>Good</option><option>Like new</option><option>Very good</option><option>Used</option></select></div><div class="field"><label for="post-price">Price in USD *</label><input id="post-price" type="number" min="0" max="999" step="1" value="10" required></div><div class="field wide"><label for="post-location">Preferred handover point *</label><select id="post-location"><option>Library exchange point</option><option>Student Centre</option><option>North Residence</option><option>South Residence</option></select></div><div class="field"><label for="post-method">Handover method *</label><select id="post-method"><option>Designated exchange point</option><option>Campus cabinet (concept)</option></select></div><div class="field"><label for="post-window">Available time window *</label><select id="post-window"><option>10:00–12:00</option><option>14:00–16:00</option><option>16:00–18:00</option></select></div><div class="field wide"><label for="post-desc">Short description</label><textarea id="post-desc" maxlength="250" placeholder="Condition, details, and anything the next owner should know..."></textarea></div></div><label class="eyebrow" style="font-size:10px">SELECT A DEMO ITEM IMAGE *</label><div class="sample-picker" id="sample-picker">${ART.slice(0,8).map(a=>`<button type="button" class="sample-option ${a===selectedArt?'selected':''}" data-art="${a}" aria-label="Use ${a} illustration"><img src="${imageFor({image:a})}" alt=""></button>`).join('')}</div><button class="btn btn-dark btn-wide" type="submit">Publish demo listing <span>↗&#xFE0E;</span></button></form><p class="modal-help">The concept policy calls for 1–5 item photos and listing moderation. This prototype uses a selected illustration as a mock photo and simulates a basic policy check; flagged keywords are held for staff review. No real content moderation or photo upload occurs.</p></div>`);
-    $('#post-type').addEventListener('change',()=>{if($('#post-type').value!=='Sell'){$('#post-price').value='0';$('#post-price').disabled=true;}else{$('#post-price').disabled=false;$('#post-price').value=10;}});
-  }
-  function showReward(index){const r=REWARDS[index];if(!r||state.points<r.cost){announce('Not enough demo points for that reward.');return;}
-    openModal(`<div class="modal-form"><span class="eyebrow">REWARDS / DEMO REDEMPTION</span><h2 id="modal-heading">A little something back.</h2><p><strong>${escapeHTML(r.title)}</strong><br>${escapeHTML(r.description)}</p><div class="status-note">Cost: ${r.cost} points. You currently have ${state.points} points. This is not a real merchant voucher, promotion or monetary transfer.</div><button type="button" class="btn btn-dark btn-wide" data-confirm-reward="${index}">Confirm demo redemption <span>↗&#xFE0E;</span></button></div>`);
-  }
-  function showManualOrder(){openModal(`<div class="modal-form"><span class="eyebrow">STAFF / NEW WORK ORDER</span><h2 id="modal-heading">Log a facility issue.</h2><p>Record an example facilities task. No actual university work-order system is connected.</p><form id="order-form"><div class="field"><label for="order-title">Issue description</label><input id="order-title" maxlength="100" required placeholder="e.g. Replace recycling bin signage"></div><div class="field"><label for="order-location">Campus location</label><select id="order-location"><option>North Residence</option><option>South Residence</option><option>Science Building</option><option>Student Centre</option></select></div><button type="submit" class="btn btn-dark btn-wide">Create demo work order <span>↗&#xFE0E;</span></button></form></div>`);}
-  function issuePoints(title,delta,source){
-    state.points+=delta;state.ledger.unshift({id:'L-'+state.nextId++,title,delta,ownerId:STUDENT,source:source||'demo',createdAt:stamp()});
-  }
-  function friendlyDate(value){if(!value)return 'Legacy demo';const d=new Date(value);return Number.isNaN(d.getTime())?'Demo date':d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
-  function badge(status){return `<span class="state-pill ${escapeHTML(String(status).toLowerCase().replace(/\s+/g,'-'))}">${escapeHTML(status)}</span>`;}
-  function activityRecords(){
-    const events=[];
-    for(const s of state.submissions.filter(x=>x.ownerId===STUDENT))events.push({title:`${s.type}: ${s.item}`,sub:`${s.status} · CA-${s.id} · ${s.location}`,date:s.createdAt||fakeTime(2),status:s.status});
-    for(const p of state.items.filter(x=>x.ownerId===STUDENT))events.push({title:`Listed: ${p.name}`,sub:`${p.status} · Item #${p.id}`,date:p.createdAt||fakeTime(4),status:p.status});
-    for(const [id,r] of Object.entries(state.reservations).filter(([_,r])=>r.ownerId===STUDENT)){const p=state.items.find(x=>x.id===Number(id));events.push({title:`Exchange: ${p?.name||'Item '+id}`,sub:`${r.stage} · ${r.method}`,date:r.createdAt||fakeTime(1),status:r.stage});}
-    for(const l of state.ledger.filter(x=>x.source!=='demo-opening'))events.push({title:l.title,sub:`${l.delta>0?'+':''}${l.delta} points · ${l.source}`,date:l.createdAt||fakeTime(3),status:'ledger'});
-    return events.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-  }
-  function renderStudent(){
-    $('#student-points').textContent=state.points;
-    $('#student-reservations').textContent=Object.values(state.reservations).filter(r=>r.ownerId===STUDENT&&r.stage!=='complete'&&r.stage!=='disputed').length;
-    $('#student-pending').textContent=state.submissions.filter(s=>s.ownerId===STUDENT&&s.status==='Pending').length;
-    const arr=activityRecords().slice(0,5);
-    $('#student-recent').innerHTML=arr.map(x=>`<div class="activity-line"><span class="activity-bullet">↗&#xFE0E;</span><div><strong>${escapeHTML(x.title)}</strong><small>${escapeHTML(x.sub)} · ${friendlyDate(x.date)}</small></div></div>`).join('')||'<p class="muted-note">Your activities will appear here.</p>';
-  }
-  function renderProfile(){
-    $('#profile-points').textContent=state.points;
-    $$('.profile-tabs [data-profile-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.profileTab===profileTab);if(b.dataset.profileTab===profileTab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
-    const title={listings:'My listings',reservations:'My reservations',actions:'My circular activities',ledger:'My points ledger',saved:'Saved items'}[profileTab];
-    let records='';
-    if(profileTab==='listings'){const arr=state.items.filter(x=>x.ownerId===STUDENT);records=arr.map(p=>`<div class="profile-record"><div><strong>${escapeHTML(p.name)}</strong><p>Item #${p.id} · ${escapeHTML(p.type)} · ${escapeHTML(p.location)}</p></div><div class="profile-record-side">${badge(p.status)}<button type="button" data-detail="${p.id}">View listing ↗&#xFE0E;</button></div></div>`).join('');}
-    if(profileTab==='reservations'){const arr=Object.entries(state.reservations).filter(([id,r])=>r.ownerId===STUDENT);records=arr.map(([id,r])=>{const p=state.items.find(x=>x.id===Number(id));return `<div class="profile-record"><div><strong>${escapeHTML(p?.name||'Listing #'+id)}</strong><p>EX-${id} · ${escapeHTML(r.method)} · ${escapeHTML(r.time)} · ${friendlyDate(r.createdAt)}</p></div><div class="profile-record-side">${badge(r.stage)}${p?.status==='Reserved'?`<button data-handover="${id}" type="button">Continue handover ↗&#xFE0E;</button>`:''}</div></div>`;}).join('');}
-    if(profileTab==='actions'){records=state.submissions.filter(s=>s.ownerId===STUDENT).map(x=>`<div class="profile-record"><div><strong>${escapeHTML(x.type)} · ${escapeHTML(x.item)}</strong><p>CA-${x.id} · ${escapeHTML(x.location)} · ${friendlyDate(x.createdAt)}</p>${x.reviewReason?`<p>Staff feedback: ${escapeHTML(x.reviewReason)}</p>`:''}</div><div class="profile-record-side">${badge(x.status)}</div></div>`).join('');}
-    if(profileTab==='ledger'){records=state.ledger.filter(x=>x.ownerId===STUDENT).map(l=>`<div class="profile-record"><div><strong>${escapeHTML(l.title)}</strong><p>${friendlyDate(l.createdAt)} · ${escapeHTML(l.source||'Demo event')} · ${escapeHTML(l.id)}</p></div><div class="profile-record-side"><strong>${l.delta>=0?'+':''}${l.delta} pts</strong></div></div>`).join('');}
-    if(profileTab==='saved'){records=state.items.filter(x=>state.favorites.includes(x.id)).map(p=>`<div class="profile-record"><div><strong>${escapeHTML(p.name)}</strong><p>${escapeHTML(p.category)} · ${price(p.price)}</p></div><div class="profile-record-side">${badge(p.status)}<button type="button" data-detail="${p.id}">View ↗&#xFE0E;</button></div></div>`).join('');}
-    $('#profile-panel').innerHTML=`<div class="profile-panel-heading"><h2>${title}</h2>${profileTab==='listings'?'<button type="button" class="btn btn-dark" data-open="post">+ New listing</button>':''}</div><div class="profile-list">${records||'<div class="profile-record"><p>Nothing here yet. Your next campus action will appear here.</p></div>'}</div>`;
-  }
-  function renderStaffExtra(){
-    const pendingReports=state.reports.filter(r=>r.status==='Open');const pendingListings=state.items.filter(p=>p.status==='Pending review');
-    $('#moderation-pill').textContent=(pendingReports.length+pendingListings.length)+' OPEN';
-    $('#moderation-list').innerHTML=[...pendingListings.map(p=>`<div class="staff-record"><div><strong>Pending listing · ${escapeHTML(p.name)}</strong><small>Item #${p.id} · ${escapeHTML(p.category)} · ${friendlyDate(p.createdAt)}</small><p>Illustrative keyword screening has referred this item to staff.</p></div><div class="staff-record-actions">${badge('Pending')}<button type="button" class="primary" data-review-listing="${p.id}">Review ↗&#xFE0E;</button></div></div>`),...pendingReports.map(r=>{const p=state.items.find(i=>i.id===r.itemId);return `<div class="staff-record"><div><strong>${escapeHTML(r.type)} report · ${escapeHTML(p?.name||'Item #'+r.itemId)}</strong><small>REP-${r.id} · ${friendlyDate(r.createdAt)} · ${escapeHTML(r.status)}</small><p>${escapeHTML(r.reason)}${r.type==='Exchange'?' · Related transaction frozen':''}</p></div><div class="staff-record-actions">${badge('Open')}<button class="primary" type="button" data-review-report="${r.id}">Resolve ↗&#xFE0E;</button></div></div>`;})].join('')||'<div class="staff-record"><p>There are no open moderation tasks. Students can report concerns from item details.</p></div>';
-    const targets=[['Landfill diverted', '≥45 tonnes / academic year', 'Current demo: data unavailable'],['Reuse / donation / repair', '≥2,800 / year', 'Current demo: annual data unavailable'],['Traceable waste stream', '≥80%', 'Current demo: no traceability denominator'],['Monthly active users', '≥30%', 'Current demo: no campus users'],['Paid ambassadors', '7–9 positions', 'Proposed staffing only'],['New demo verified events',String(state.submissions.filter(s=>s.status==='Approved').length),'Local approvals; not university outcome']];
-    $('#sustainability-targets').innerHTML=targets.map(([a,b,c])=>`<article class="target-card"><span>${escapeHTML(a)}</span><strong>${escapeHTML(b)}</strong><small>${escapeHTML(c)}</small></article>`).join('');
-    $('#audit-records').innerHTML=state.auditEvents.map(x=>`<div class="staff-record"><div><strong>${escapeHTML(x.action)} · ${escapeHTML(x.object)}</strong><small>${escapeHTML(x.role.toUpperCase())} · ${friendlyDate(x.at)} · ${escapeHTML(x.at?.slice(11,16)||'')}</small><p>${escapeHTML(x.reason||'No additional note')}</p></div>${badge(x.outcome)}</div>`).join('')||'<div class="staff-record">No events yet.</div>';
-  }
-  function reviewSubmission(id){
-    if(!roleGate('staff'))return;const s=state.submissions.find(x=>x.id===id);if(!s||s.status!=='Pending'){announce('This record is no longer pending.');return;}
-    openModal(`<div class="modal-form"><span class="eyebrow">STAFF / HUMAN VERIFICATION</span><h2 id="modal-heading">Review CA-${s.id}.</h2><p>${escapeHTML(s.type)} · ${escapeHTML(s.item)} · ${escapeHTML(s.location)} · ${friendlyDate(s.createdAt)}</p><div class="status-note">No physical waste was verified by this prototype. Select a simulated decision with a reason; only Approved issues points once.</div><form id="verification-decision-form" data-id="${s.id}"><div class="field"><label for="verification-decision">Decision *</label><select id="verification-decision"><option value="Approved">Approve</option><option value="Rejected">Reject</option></select></div><div class="field"><label for="verification-reason">Review note / rejection reason *</label><textarea id="verification-reason" maxlength="180" required placeholder="e.g. Staff demo review of submitted record"></textarea></div><button type="submit" class="btn btn-dark btn-wide">Record simulated decision ↗&#xFE0E;</button></form></div>`);
-  }
-  function reviewListing(id){
-    if(!roleGate('staff'))return;const p=state.items.find(x=>x.id===id);if(!p||p.status!=='Pending review')return;
-    openModal(`<div class="modal-form"><span class="eyebrow">STAFF / LISTING MODERATION</span><h2 id="modal-heading">Review item #${id}.</h2><p>${escapeHTML(p.name)} · ${escapeHTML(p.category)}. Policy review is a demo of human oversight, not a validated content filter.</p><form id="listing-review-form" data-id="${id}"><div class="field"><label for="listing-decision">Decision</label><select id="listing-decision"><option value="Approved">Approve listing</option><option value="Rejected">Reject listing</option></select></div><div class="field"><label for="listing-review-reason">Reason code / decision note *</label><input id="listing-review-reason" maxlength="120" required placeholder="e.g. POLICY-REVIEW: requires clarification"></div><button class="btn btn-dark btn-wide" type="submit">Confirm staff review ↗&#xFE0E;</button></form></div>`);
-  }
-  function reportItem(id){
-    if(!roleGate('student'))return;const p=state.items.find(x=>x.id===id);if(!p)return;
-    openModal(`<div class="modal-form"><span class="eyebrow">EXCHANGE / SAFETY & TRUST</span><h2 id="modal-heading">Report a concern.</h2><p>Item #${p.id} · ${escapeHTML(p.name)}. The record will be sent to the demonstration staff queue. Reports on an active or completed exchange freeze its status.</p><form id="report-form" data-id="${id}"><div class="field"><label for="report-reason">Describe the concern *</label><textarea id="report-reason" required minlength="8" maxlength="240" placeholder="e.g. The item's condition was not as described"></textarea></div><button class="btn btn-dark btn-wide" type="submit">Submit demo report ↗&#xFE0E;</button></form><p class="modal-help">Proposed human response target: within two days; no messages are sent.</p></div>`);
-  }
-  function reviewReport(id){
-    if(!roleGate('staff'))return;const r=state.reports.find(x=>x.id===id);if(!r||r.status!=='Open')return;
-    openModal(`<div class="modal-form"><span class="eyebrow">STAFF / REPORT REVIEW</span><h2 id="modal-heading">Resolve REP-${id}.</h2><p>${escapeHTML(r.type)} · ${escapeHTML(r.reason)}. No automatic sanctions will be imposed.</p><form id="report-review-form" data-id="${id}"><div class="field"><label for="report-decision">Staff decision</label><select id="report-decision"><option value="Closed">Close report, restore record</option><option value="Removed">Remove listing from marketplace</option></select></div><div class="field"><label for="report-review-note">Staff reasoning *</label><textarea id="report-review-note" required minlength="5" maxlength="200" placeholder="Explain the manual decision"></textarea></div><button type="submit" class="btn btn-dark btn-wide">Record resolution ↗&#xFE0E;</button></form></div>`);
-  }
-  function handleClick(event){
-    const t=event.target.closest('button');if(!t)return;
-    if(t.dataset.onboardingStart){
-      const shell=$('#modal-shell');
-      const target=$('#onboarding-role-section');
-      if(shell&&target){
-        const top=target.getBoundingClientRect().top-shell.getBoundingClientRect().top+shell.scrollTop-32;
-        const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-        shell.scrollTo({top:Math.max(0,top),behavior:reduced?'instant':'smooth'});
-        $('#onboarding-role-title')?.focus({preventScroll:true});
-      }
-      return;
-    }
-    
-    if(t.dataset.enterRole){chooseRole(t.dataset.enterRole);return;}if(t.dataset.open === 'portal'){ showPortalChoice();return;}
-    if (t.dataset.nav && role === 'guest' && t.dataset.nav !== 'home'){  showPortalChoice();  return;}
-    if(t.dataset.nav){if(t.dataset.profileTab)profileTab=t.dataset.profileTab;navigate(t.dataset.nav);if(t.dataset.jump&&role==='student'){requestAnimationFrame(()=>{const sel=t.dataset.jump==='wallet'?'#wallet-section':'#circular-tools';$(sel)?.scrollIntoView({behavior:'smooth',block:'start'});});}return;}
-    if(t.dataset.profileTab){if(!roleGate('student'))return;profileTab=t.dataset.profileTab;renderProfile();return;}
-    const staffActions=['adminTab','reviewSubmission','reviewListing','reviewReport','resolve','createNorthOrder'];
-    const studentActions=['open','detail','category','favorite','startReserve','handover','acceptSeller','scan','complete','art','redeem','confirmReward','reportItem'];
-    if(staffActions.some(key=>key in t.dataset)&&!roleGate('staff'))return;
-    if(studentActions.some(key=>key in t.dataset)&&!roleGate('student'))return;
-    if(t.dataset.open==='post'){showPost();return;}
-    if(t.dataset.detail){showDetail(Number(t.dataset.detail));return;}
-    if(t.dataset.category){category=t.dataset.category;renderProducts();return;}
-    if(t.dataset.favorite){const id=Number(t.dataset.favorite);state.favorites=state.favorites.includes(id)?state.favorites.filter(x=>x!==id):[...state.favorites,id];save();paint();announce(state.favorites.includes(id)?'Saved to My Profile.':'Removed from saved items.');return;}
-    if(t.dataset.startReserve){const p=state.items.find(x=>x.id===Number(t.dataset.startReserve));if(p?.ownerId===STUDENT){announce('You cannot reserve your own listing.');return;}reserveForm(Number(t.dataset.startReserve));return;}
-    if(t.dataset.handover){showHandover(Number(t.dataset.handover));return;}
-    if(t.dataset.acceptSeller){const id=Number(t.dataset.acceptSeller);const r=state.reservations[id];if(r&&r.stage==='pending'){r.stage='accepted';r.respondedAt=stamp();audit('Seller response simulated','EX-'+id,'Accepted');save();paint();showHandover(id);}return;}
-    if(t.dataset.scan){const id=Number(t.dataset.scanItem),r=state.reservations[id];if(r&&r.stage==='accepted'){const key=t.dataset.scan==='seller'?'sellerScan':'buyerScan';if(!r[key]){r[key]=true;audit('Handover confirmation','EX-'+id,key);save();paint();}showHandover(id);}return;}
-    const readNotificationButton = t.closest('[data-read-notification]');
-if (readNotificationButton) {
-  markNotificationRead(readNotificationButton.dataset.readNotification);
-  return;
-}
-    if(t.dataset.complete){const id=Number(t.dataset.complete),r=state.reservations[id],p=state.items.find(x=>x.id===id);if(!r||!p||r.stage!=='accepted'||!r.sellerScan||!r.buyerScan||p.status!=='Reserved'){announce('Both confirmations are required before completion.');return;}p.status='Completed';r.stage='complete';r.completedAt=stamp();state.completed++;issuePoints('Verified exchange · '+p.name,20,'EX-'+id);audit('Exchange completed','EX-'+id,'Completed','Simulated dual-party confirmation');addStudentNotification('Exchange completed', 'Your exchange for '+p.name+' is complete. You earned 20 demo points.', 'exchange-'+id);save();closeModal();paint();announce('Exchange completed. +20 demo points recorded once.');return;}
-    if(t.dataset.art){selectedArt=t.dataset.art;$$('[data-art]').forEach(b=>b.classList.toggle('selected',b.dataset.art===selectedArt));return;}
-    if(t.dataset.redeem){showReward(Number(t.dataset.redeem));return;}
-    if(t.dataset.confirmReward){const index=Number(t.dataset.confirmReward),r=REWARDS[index];if(!r||state.points<r.cost){announce('Not enough points.');return;}issuePoints('Redeemed · '+r.title,-r.cost,'REWARD-'+index);if(index===0)state.featuredCredits++;audit('Reward redeemed','REWARD-'+index,'Deducted',r.title);save();closeModal();paint();announce(index===0?'Demo feature credit saved; promotion waits for category capacity.':'Illustrative reward recorded; not a real voucher.');return;}
-    if(t.dataset.reviewSubmission){reviewSubmission(Number(t.dataset.reviewSubmission));return;}
-    if(t.dataset.reviewListing){reviewListing(Number(t.dataset.reviewListing));return;}
-    if(t.dataset.reviewReport){reviewReport(Number(t.dataset.reviewReport));return;}
-    if(t.dataset.reportItem){reportItem(Number(t.dataset.reportItem));return;}
-    if(t.dataset.resolve){const w=state.workOrders.find(x=>x.id===Number(t.dataset.resolve));if(!w||w.status!=='Open')return;w.status='Resolved';w.updatedAt=stamp();audit('Work order resolved','WO-'+w.id,'Resolved','Follow-up recorded, effectiveness not verified');save();paint();announce('Demo work order resolved. Real effectiveness requires reinspection.');return;}
-    if(t.dataset.adminTab){setAdminTab(t.dataset.adminTab);return;}
-    if(t.dataset.createNorthOrder!==undefined){createOrder();setAdminTab('facilities');return;}
-  }
-  function handleSubmit(event){
-    const form=event.target;const id=form.id;
-    if(!['post-form','reservation-form','action-form','order-form','verification-decision-form','listing-review-form','report-form','report-review-form'].includes(id))return;
-    event.preventDefault();
-    if(['order-form','verification-decision-form','listing-review-form','report-review-form'].includes(id)&&!roleGate('staff'))return;
-    if(['post-form','reservation-form','action-form','report-form'].includes(id)&&!roleGate('student'))return;
-    if(id==='post-form'){
-      const title=$('#post-title').value.trim(),type=$('#post-type').value,val=type==='Sell'?Number($('#post-price').value):0;
-      if(!title||!Number.isFinite(val)||val<0){announce('Enter a valid item and price.');return;}
-      const flagged=/\b(weapon|knife|vape|tobacco)\b/i.test(title);const p={id:state.nextId++,name:title,category:$('#post-category').value,price:val,condition:$('#post-condition').value,location:$('#post-location').value,seller:'Alex M. · demo student',ownerId:STUDENT,method:$('#post-method').value,timeWindow:$('#post-window').value,image:selectedArt,type,desc:$('#post-desc').value.trim()||'A student item ready for its next campus home.',status:flagged?'Pending review':'Available',date:Date.now(),createdAt:stamp(),photosDemo:1};
-      state.items.unshift(p);audit('Listing submitted','ITEM-'+p.id,p.status,flagged?'Demo keyword triggered human review':'Illustrative automatic check; no real policy engine');save();closeModal();category='All items';$('#market-search').value='';$('#market-sort').value='newest';navigate(flagged?'profile':'exchange');if(flagged){profileTab='listings';renderProfile();}announce(flagged?'Listing held for simulated staff review.':'Sample listing published after illustrative auto-check.');return;
-    }
-    if(id==='reservation-form'){
-      const i=Number(form.dataset.item),p=state.items.find(x=>x.id===i);if(!p||p.status!=='Available'||p.ownerId===STUDENT){announce('This item is not available for you to reserve.');return;}
-      p.status='Reserved';state.reservations[i]={ownerId:STUDENT,stage:'pending',method:$('#reserve-method').value,time:$('#reserve-time').value,sellerScan:false,buyerScan:false,createdAt:stamp()};audit('Reservation made','EX-'+i,'Pending','Proposed 24h hold / seller responds within 12h; timers conceptual');save();paint();showHandover(i);announce('Reserved in the demo. Seller acceptance pending.');return;
-    }
-    if(id==='action-form'){
-      const type=$('#action-type').value,item=$('#action-item').value.trim(),location=$('#action-location').value;if(!item){announce('Please add an item or material.');return;}
-      const sub={id:state.nextId++,type,item,location,status:'Pending',ownerId:STUDENT,createdAt:stamp()};state.submissions.unshift(sub);audit('Circular event submitted','CA-'+sub.id,'Pending','Requires human verification');save();$('#action-item').value='';paint();announce('Submitted CA-'+sub.id+'. No points before staff approval.');return;
-    }
-    if(id==='order-form'){const title=$('#order-title').value.trim();if(!title)return;createOrder(title,$('#order-location').value);closeModal();setAdminTab('facilities');return;}
-    if(id==='verification-decision-form'){
-      const s=state.submissions.find(x=>x.id===Number(form.dataset.id));if(!s||s.status!=='Pending'){announce('Already reviewed.');closeModal();return;}
-      const decision=$('#verification-decision').value,reason=$('#verification-reason').value.trim();if(reason.length<4){announce('Add a short review note.');return;}
-      s.status=decision;s.reviewReason=reason;s.reviewedAt=stamp();s.reviewedBy='Demo staff';
-      if(decision==='Approved'){state.approved++;issuePoints('Staff-approved '+s.type.toLowerCase()+' · '+s.item,s.type==='Recycle'?5:15,'CA-'+s.id);}
-      
-audit('Circular action reviewed','CA-'+s.id,decision,reason);
-
-addStudentNotification(
-  decision==='Approved' ? 'Circular action approved' : 'Circular action rejected',
-  'Your '+s.type.toLowerCase()+' submission for '+s.item+
-  ' was '+decision.toLowerCase()+'. Review note: '+reason,
-  'circular-review-'+s.id
-);
-
-save();
-closeModal();
-paint();
-setAdminTab('verification');
-announce(decision==='Approved'?'Approved and points issued once.':'Rejected, no points issued.');
-return;
-
-    }
-    
-if(id==='listing-review-form'){
-  const p=state.items.find(x=>x.id===Number(form.dataset.id));
-
-  if(!p||p.status!=='Pending review')return;
-
-  const decision=$('#listing-decision').value;
-  const reason=$('#listing-review-reason').value.trim();
-
-  if(!reason){
-    announce('Reason code required.');
-    return;
-  }
-
-  p.status=decision==='Approved'?'Available':'Rejected';
-  p.reviewReason=reason;
-
-  audit('Listing human-reviewed','ITEM-'+p.id,p.status,reason);
-
-  // NEW: Notify the student about the listing review
-  if(p.ownerId===STUDENT){
-    addStudentNotification(
-      p.status==='Available' ? 'Listing approved' : 'Listing rejected',
-      'Your listing "'+p.name+'" was '+
-      (p.status==='Available'?'approved and is now available.':'rejected.')+
-      ' Review note: '+reason,
-      'listing-review-'+p.id
-    );
-  }
-
-  save();
-  closeModal();
-  paint();
-  setAdminTab('moderation');
-  announce('Demo staff decision recorded.');
-  return;
-}
-
-    if(id==='report-form'){
-      const p=state.items.find(x=>x.id===Number(form.dataset.id)),reason=$('#report-reason').value.trim();if(!p||reason.length<8){announce('Please describe the concern.');return;}
-      const existing=state.reports.some(r=>r.itemId===p.id&&r.ownerId===STUDENT&&r.status==='Open');if(existing){announce('You already have an open report for this item.');return;}
-      const isExchange=['Reserved','Completed'].includes(p.status);const r={id:state.nextId++,itemId:p.id,ownerId:STUDENT,type:isExchange?'Exchange':'Listing',reason,status:'Open',createdAt:stamp(),previousStatus:p.status,previousStage:state.reservations[p.id]?.stage};state.reports.unshift(r);
-      if(isExchange){p.status='Disputed';if(state.reservations[p.id])state.reservations[p.id].stage='disputed';}
-      audit('Student reported item','REP-'+r.id,'Open',reason);save();closeModal();paint();announce('Report submitted to staff. Exchange frozen if applicable.');return;
-    }
-    if(id==='report-review-form'){
-      const r=state.reports.find(x=>x.id===Number(form.dataset.id)),reason=$('#report-review-note').value.trim();if(!r||r.status!=='Open'||reason.length<5){announce('Please add review reasoning.');return;}
-      const decision=$('#report-decision').value,p=state.items.find(x=>x.id===r.itemId);r.status='Closed';r.resolution=decision;r.reviewReason=reason;r.reviewedAt=stamp();
-      if(p&&decision==='Removed')p.status='Removed';else if(p&&r.type==='Exchange'){p.status=r.previousStatus||'Reserved';if(state.reservations[p.id])state.reservations[p.id].stage=r.previousStage||'accepted';}
-      
-audit('Report human-reviewed','REP-'+r.id,decision,reason);
-
-if(r.ownerId===STUDENT){
-  addStudentNotification(
-    'Report reviewed',
-    'Your report #'+r.id+' has been reviewed. Decision: '+
-    decision+'. Staff note: '+reason,
-    'report-review-'+r.id
-  );
-}
-
-save();
-closeModal();
-paint();
-setAdminTab('moderation');
-announce('Report resolved with staff reasoning.');
-return;
-
-    }
-  }
-  document.addEventListener('click',handleClick);
-  document.addEventListener('submit',handleSubmit);
-  $('#market-search').addEventListener('input',renderProducts);
-  $('#market-sort').addEventListener('change',renderProducts);
-  $('#clear-search').addEventListener('click',()=>{category='All items';$('#market-search').value='';$('#market-sort').value='newest';renderProducts();});
-  $('#sort-guide').addEventListener('change',renderGuide);
-  $('#verification-list').addEventListener('change',e=>{if(['verification-status','verification-type','verification-location'].includes(e.target.id))renderVerificationRows();});
-  $('#menu-toggle').addEventListener('click',()=>{const next=$('#mobile-nav').hidden;$('#mobile-nav').hidden=!next;$('#menu-toggle').setAttribute('aria-expanded',String(next));});
-  $('#switch-portal').addEventListener('click',exitRole);
-  $('#modal-close').addEventListener('click',closeModal);
-  $('#modal-backdrop').addEventListener('click',e=>{if(e.target===$('#modal-backdrop'))closeModal();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();$('#mobile-nav').hidden=true;$('#menu-toggle').setAttribute('aria-expanded','false');}if(e.key==='Tab'&&!$('#modal-backdrop').hidden){const focusable=$$('#modal-shell button:not([disabled]),#modal-shell input:not([disabled]),#modal-shell select:not([disabled]),#modal-shell textarea:not([disabled])').filter(el=>el.offsetParent!==null);if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
-  $('#jump-to-action').addEventListener('click',()=>{if(!roleGate('student'))return;$('#circular-tools').scrollIntoView({behavior:'smooth',block:'start'});$('#action-item').focus({preventScroll:true});});
-  $('#jump-to-wallet').addEventListener('click',()=>{if(roleGate('student'))$('#wallet-section').scrollIntoView({behavior:'smooth',block:'start'});});
-  $$('[data-action-type]').forEach(b=>b.addEventListener('click',()=>{if(!roleGate('student'))return;$('#action-type').value=b.dataset.actionType;$('#circular-tools').scrollIntoView({behavior:'smooth',block:'start'});$('#action-item').focus({preventScroll:true});}));
-  $('#create-signage-order').addEventListener('click',()=>{if(roleGate('staff'))createOrder();});
-  $('#new-facility-order').addEventListener('click',()=>{if(roleGate('staff'))showManualOrder();});
-  $('#reset-demo').addEventListener('click',()=>{if(!window.confirm('Reset all fictional RELOOP data, reservations, rewards, staff decisions and work orders?'))return;state=initialState();role='guest';try{localStorage.removeItem(ROLE_KEY);}catch(e){}category='All items';profileTab='listings';save();closeModal();refreshRole();navigate('home');setAdminTab('overview');announce('All demo records reset to the fictional starting scenario.');});
-  
-function syncFromUrl() {
-  const target = location.hash.slice(1) || 'home';
-
-  // 仅在目标页面变化时恢复页面
-  if (target !== route) {
-    navigate(target, false);
-  }
-}
-
-window.addEventListener('popstate', syncFromUrl);
-window.addEventListener('hashchange', syncFromUrl);
-
-  window.addEventListener('storage',e=>{if(e.key===KEY){state=loadState();paint();}else if(e.key===ROLE_KEY){role=['student','staff'].includes(e.newValue)?e.newValue:'guest';refreshRole();navigate(role==='guest'?'home':role==='staff'?'operations':'student');}});
-  save();renderGuide();refreshRole();paint();setAdminTab('overview');navigate(location.hash.slice(1)||'home', false);
-})();

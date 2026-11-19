@@ -651,3 +651,52 @@
   opacity: 0.7;
 }
 
+
+
+/* ===== Product-detail rewards discovery (only inside item modal) ===== */
+.detail-savings { margin-top: 20px; padding: 14px 0 2px; border-top: 1px solid var(--line); min-width: 0; }
+.detail-savings-teaser { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.detail-savings-teaser > img { width: 66px; height: 66px; flex: 0 0 66px; background: #EDF1DF; border-radius: 6px; object-fit: cover; }
+.detail-savings-teaser-copy { min-width: 0; flex: 1; }
+.detail-savings-teaser-copy > strong { display: block; color: var(--deep); font-size: 15px; line-height: 1.3; letter-spacing: -.025em; }
+.detail-savings-teaser-copy p { margin: 3px 0 4px; color: #6B775F; font-size: 12px; line-height: 1.5; }
+.detail-savings-toggle, .detail-savings-card-action { padding: 3px 0; color: #4B682F; background: transparent; border: 0; border-bottom: 1px solid #9BAB76; font-size: 12px; font-weight: 780; text-align: left; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+.detail-savings-toggle:hover, .detail-savings-card-action:hover { color: #263C21; border-color: currentColor; }
+.detail-savings-panel { margin-top: 15px; min-width: 0; }
+.detail-savings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 11px; }
+.detail-savings-card { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; background: #E1F0C1; border: 1px solid #CADFA5; padding: 16px; border-radius: 6px; }
+.detail-savings-friends { background: #F1F3E9; border-color: #D7E0CC; }
+.detail-savings-kicker { font-size: 9px; letter-spacing: .095em; font-weight: 850; color: #607348; }
+.detail-savings-card h3 { margin: 3px 0 0; font-size: 20px; line-height: 1.17; letter-spacing: -.047em; font-weight: 710; color: var(--deep); }
+.modal-info .detail-savings-card p { font-size: 12px; line-height: 1.55; color: #546349; margin: 0 0 8px; }
+.detail-savings-card-action { margin-top: auto; }
+.detail-savings-invite { min-width: 0; margin-top: 12px; padding: 16px; border: 1px solid #C8D8B5; border-radius: 6px; background: #F3F6EC; }
+.detail-savings-invite-layout { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 13px; margin-top: 12px; align-items: start; }
+.detail-savings-share-fields { min-width: 0; }
+.modal-info .detail-savings-share-fields p { margin: 0 0 8px; font-size: 12px; color: var(--deep); }
+.detail-savings-share-fields label { display: block; margin-bottom: 5px; font-size: 11px; font-weight: 750; color: #526747; }
+.detail-savings-share-fields input { display: block; width: 100%; min-width: 0; border: 1px solid #BDCCAB; background: #FFF; color: #243525; border-radius: 4px; padding: 10px 9px; font-size: 11px; }
+.detail-savings-copy, .detail-savings-simulate { display: inline-flex; align-items: center; gap: 9px; min-height: 36px; border: 0; border-radius: 100px; padding: 8px 14px; background: var(--deep); color: #FFF; font-size: 12px; font-weight: 750; line-height: 1.3; margin-top: 9px; text-align: center; justify-content: center; }
+.detail-savings-copy:hover, .detail-savings-simulate:hover:not(:disabled) { background: #566B3C; }
+.detail-savings-copy-status { display: block; font-size: 11px; min-height: 1.7em; color: #456733; margin-top: 7px; }
+.detail-savings-qr { width: 176px; max-width: 100%; background: #FFF; border: 1px solid #D3DDC9; padding: 7px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.detail-savings-qr img { width: 160px; height: 160px; max-width: 100%; object-fit: contain; background: white; }
+.detail-savings-qr small { font-size: 9px; color: #637355; text-align: center; }
+.modal-info .detail-savings-demo-note { color: #697761; font-size: 10px; line-height: 1.65; margin: 10px 0 0; }
+.detail-savings-simulate { margin-top: 10px; white-space: normal; }
+.detail-savings-simulate:disabled { background: #DBE3D1; color: #52614D; cursor: not-allowed; }
+/* Keep original modal width until the user expands the two reward options. */
+.modal-shell:has(.detail-savings-panel:not([hidden])) { width: min(1140px, calc(100vw - 40px)); }
+/* Use zero-minimum grid tracks to keep the item's image from widening the photo column. */
+.modal-shell:has(.detail-savings-panel:not([hidden])) .modal-layout { grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr); }
+.modal-shell:has(.detail-savings-panel:not([hidden])) .modal-photo { min-width: 0; overflow: hidden; }
+@media (max-width: 700px) {
+  .modal-shell:has(.detail-savings-panel:not([hidden])) { width: 100%; }
+  .modal-shell:has(.detail-savings-panel:not([hidden])) .modal-layout { grid-template-columns: minmax(0, 1fr); }
+  .detail-savings-invite-layout { grid-template-columns: 1fr; }
+  .detail-savings-qr { width: fit-content; }
+  .detail-savings-card h3 { font-size: 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .detail-savings *, .detail-savings *::before, .detail-savings *::after { transition: none !important; animation: none !important; }
+}
