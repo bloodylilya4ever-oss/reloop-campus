@@ -17,7 +17,7 @@
     <div class="container header-inner">
       <button class="brand" type="button" data-nav="home" aria-label="RELOOP home"><span class="brand-symbol" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M29 13A12 12 0 0 0 8 8l-2 4M6 8v7h7"/><path d="M7 23a12 12 0 0 0 21 5l2-4m0 4v-7h-7"/></svg></span><span>RELOOP<span class="brand-period">.</span></span></button>
       <nav class="desktop-nav" aria-label="Main navigation">
-        <button data-nav="home" class="nav-link active" type="button">Home</button><button data-nav="student" data-student-only class="nav-link" type="button" hidden>My home</button>
+        <button data-nav="home" class="nav-link active" type="button">Home</button><button data-nav="student" data-student-only class="nav-link nav-my-home" type="button" hidden>My home<span class="notification-dot" aria-hidden="true" hidden></span></button>
         <button data-nav="exchange" data-student-only class="nav-link" type="button" hidden>Marketplace</button>
         <button data-nav="circular" data-student-only class="nav-link" type="button" hidden>Circular actions</button><button data-nav="profile" data-student-only class="nav-link" type="button" hidden>My profile</button>
         <button data-nav="operations" data-staff-only class="nav-link" type="button" hidden>Staff workspace <span class="nav-staff">STAFF</span></button>
@@ -29,7 +29,7 @@
       </div>
     </div>
     <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile navigation" hidden>
-      <button data-nav="home" type="button">Home <span>01</span></button><button data-nav="student" data-student-only hidden type="button">My home <span>02</span></button>
+      <button data-nav="home" type="button">Home <span>01</span></button><button data-nav="student" data-student-only class="mobile-my-home" hidden type="button">My home <span class="notification-dot" aria-hidden="true" hidden></span><span>02</span></button>
       <button data-nav="exchange" data-student-only hidden type="button">Marketplace <span>03</span></button>
       <button data-nav="circular" data-student-only hidden type="button">Circular actions <span>04</span></button><button data-nav="profile" data-student-only hidden type="button">My profile <span>05</span></button>
       <button data-nav="operations" data-staff-only hidden type="button">Staff workspace <span>02</span></button>
@@ -101,19 +101,26 @@
       data-partner-circular
     >
       Learn More
-      <span aria-hidden="true">↗</span>
+      <span aria-hidden="true">↗&#xFE0E;</span>
     </button>
   </div>
 
-  <div class="partner-visual">
+  
+<div class="partner-visual">
+  <div class="partner-image-scroll" tabindex="0"
+       aria-label="Scroll horizontally to view the advertisement">
     <img
       src="assets/campus-repair-spotlight.webp"
-      alt="Illustration of students participating in a campus repair activity"
-      width="900"
+      alt="Second-hand sailor uniform advertisement"
+      width="896"
       height="630"
       loading="lazy"
+      class="partner-ad-image"
     >
   </div>
+  <p class="partner-swipe-hint">← Swipe to view the full ad →</p>
+</div>
+
 </section>
 
     </section>
@@ -124,13 +131,15 @@
       <div class="container student-wrap">
         <div class="portal-page-head"><div><span class="eyebrow">STUDENT PORTAL / MY HOME</span><h1>A little more<br><i>good, every day.</i></h1><p>Welcome back, Alex. Here's what is happening in your circular campus.</p></div><div class="persona-card"><span class="persona-avatar">AM</span><span><strong>Alex Morgan</strong><small>STUDENT DEMO · NO REAL ACCOUNT</small></span><button class="inline-link" data-nav="profile" type="button">Profile ↗&#xFE0E;</button></div></div>
         <div class="student-kpis"><button type="button" data-nav="circular" data-jump="wallet"><span>MY RELOOP POINTS</span><strong id="student-points">65</strong><small>View rewards ↗&#xFE0E;</small></button><button type="button" data-nav="profile" data-profile-tab="reservations"><span>MY RESERVATIONS</span><strong id="student-reservations">0</strong><small>Review handovers ↗&#xFE0E;</small></button><button type="button" data-nav="profile" data-profile-tab="actions"><span>AWAITING VERIFICATION</span><strong id="student-pending">1</strong><small>See status ↗&#xFE0E;</small></button></div>
+        <section class="student-notifications" aria-labelledby="student-notifications-title"><div class="student-notification-heading"><span class="eyebrow" id="student-notifications-title">LATEST UPDATES</span><span class="tiny-muted">Demo notifications · saved on this device</span></div><div id="student-notifications-list" aria-live="polite"></div></section>
         <div class="student-home-grid"><div class="student-main-card"><div class="section-microhead"><span class="eyebrow">MY NEXT STEPS</span><span>QUICK ACTIONS</span></div><h2>What will you<br><i>pass on next?</i></h2><div class="quick-action-grid"><button type="button" data-nav="exchange"><span class="quick-icon">↗&#xFE0E;</span><strong>Explore items</strong><small>Find your next useful thing</small></button><button type="button" data-open="post"><span class="quick-icon">＋</span><strong>Post an item</strong><small>Give something a new life</small></button><button type="button" data-nav="circular" data-jump="action"><span class="quick-icon">♻&#xFE0E;</span><strong>Record an action</strong><small>Submit for staff review</small></button><button type="button" data-nav="circular" data-jump="wallet"><span class="quick-icon">✳&#xFE0E;</span><strong>Rewards wallet</strong><small>Track verified points</small></button></div></div><div class="student-activity-card"><div class="section-microhead"><span class="eyebrow">PERSONAL ACTIVITY</span><button class="inline-link" data-nav="profile" type="button">View all ↗&#xFE0E;</button></div><div id="student-recent"></div></div></div>
         <div class="student-lower-note"><span>THE PERSONAL IMPACT VIEW</span><strong>Measured impact:</strong> Not yet tracked in this demo. Only verified events and sample points are shown.</div>
       </div>
     </section>
     <!-- STUDENT PORTAL / MY PROFILE -->
     <section class="view" id="view-profile" aria-label="Student profile and activity" hidden>
-      <div class="container profile-wrap"><div class="profile-hero"><div class="profile-avatar">AM</div><div><span class="eyebrow">STUDENT PORTAL / MY PROFILE</span><h1>My little<br><i>corner of ReLoop.</i></h1><p>Alex Morgan · Demo student account. Your information here is illustrative, not campus identity data.</p></div><div class="profile-hero-points"><strong id="profile-points">65</strong><span>RELOOP POINTS</span><button type="button" data-nav="circular" data-jump="wallet">Open wallet ↗&#xFE0E;</button></div></div>
+      <div class="container profile-wrap"><div class="profile-hero"><div class="profile-avatar">AM</div><div><span class="eyebrow">STUDENT PORTAL / MY PROFILE</span><h1>My little<br><i>corner of ReLoop.</i></h1><p>Alex Morgan · Demo student account. Your information here is illustrative, not campus identity data.</p></div>
+      <strong id="profile-points">65</strong><span>RELOOP POINTS</span><button type="button" data-nav="circular" data-jump="wallet">Open wallet ↗&#xFE0E;</button></div></div>
       <nav class="profile-tabs" aria-label="My activity sections"><button type="button" data-profile-tab="listings" class="active" aria-current="page">My listings</button><button type="button" data-profile-tab="reservations">Reservations</button><button type="button" data-profile-tab="actions">Circular activities</button><button type="button" data-profile-tab="ledger">Points ledger</button><button type="button" data-profile-tab="saved">Saved items</button></nav>
       <div id="profile-panel" class="profile-panel" aria-live="polite"></div>
       <div class="profile-privacy">PRIVACY BY DESIGN · No genuine student ID, private contact details, dorm room or payment information is stored or displayed.</div></div>
@@ -140,7 +149,14 @@
     <section class="view" id="view-exchange" aria-label="Campus Exchange Hub" hidden>
       <div class="container page-lead marketplace-lead"><div><span class="eyebrow">MODULE A / CAMPUS EXCHANGE HUB</span><h1>Good finds.<br><i>Better stories.</i></h1><p>From dorm essentials to second-hand textbooks. Find your next useful thing, right here on campus.</p></div><div class="page-lead-side"><span class="serial">A / 01</span><div class="lead-count"><strong id="listing-count">08</strong><span>DEMO ITEMS<br>IN THE EXCHANGE</span></div><button class="btn btn-dark" data-open="post" type="button">+ List your item</button></div></div>
       <div class="container marketplace-content"><div class="toolbar"><label class="search-wrap" for="market-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="market-search" type="search" placeholder="Search books, essentials, electronics..." autocomplete="off"></label><div class="sort-wrap"><label for="market-sort">SORT BY</label><select id="market-sort"><option value="newest">Newest first</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></div></div>
-      <div class="catalog-shell"><aside class="catalog-aside"><div class="aside-top"><span class="eyebrow">EXPLORE BY TYPE</span><span>✳&#xFE0E;</span></div><div class="category-list" id="category-list"></div><div class="aside-note"><strong>Exchange with care.</strong><p>Use a designated handover point, inspect the item, and confirm the exchange together.</p><span>TRUSTED CAMPUS FLOW ↗&#xFE0E;</span></div></aside><div class="catalog-main"><div class="catalog-meta"><span id="results-summary">All campus listings</span><span><span class="legend-dot"></span> Verified demo flow</span></div><div class="product-grid market-grid" id="market-products"></div><div class="empty-state" id="market-empty" hidden><div class="empty-symbol">◎</div><h3>No items found</h3><p>Try another category or a simpler search.</p><button class="btn btn-dark" id="clear-search" type="button">Clear filters</button></div></div></div></div>
+      <div class="catalog-shell"><aside class="catalog-aside"><div class="aside-top"><span class="eyebrow">EXPLORE BY TYPE</span><span>✳&#xFE0E;</span></div><div class="category-list" id="category-list"></div>
+        <div class="aside-note ad-card"><span class="market-ad-label">AD CARD</span> <h3>An advertisement:<br>■ ■ ■ ■ ■.</h3><p>This is a mysterious advertisement sent by Zoe. </b>"The advertising slogan is: ■■■■■. No need for promotional pictures. "</b><br>She said so.<br> Although the actual meaning is unclear, interested parties are welcome to contact Zoe at: 138xxxx2710...</p>  
+<span class="market-ad-link">
+  Learn more
+  <span class="market-ad-arrow" aria-hidden="true">↗&#xFE0E;</span>
+</span>
+</div></aside>
+        <div class="catalog-main"><div class="catalog-meta"><span id="results-summary">All campus listings</span><span><span class="legend-dot"></span> Verified demo flow</span></div><div class="product-grid market-grid" id="market-products"></div><div class="empty-state" id="market-empty" hidden><div class="empty-symbol">◎</div><h3>No items found</h3><p>Try another category or a simpler search.</p><button class="btn btn-dark" id="clear-search" type="button">Clear filters</button></div></div></div></div>
       <section class="exchange-bottom"><div class="container"><div><span class="eyebrow">A LITTLE REMINDER</span><h2>Every handover<br>is a chance to <i>reuse.</i></h2></div><p>Reservations hold an item for 24 hours. A seller has 12 hours to respond in the proposed system. The demonstration simulates seller acceptance and both QR confirmations.</p></div></section>
     </section>
 

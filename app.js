@@ -31,7 +31,7 @@
   const fakeTime=(days=0)=>new Date(Date.now()-days*86400000).toISOString();
   const seedItems=()=>structuredClone(BASE_ITEMS).map(p=>p.id===108?{...p,seller:'Alex M. · demo student',ownerId:STUDENT}:p);
   const initialState = () => ({
-    meta:{schemaVersion:4},items:seedItems(),points:65,
+meta:{schemaVersion:4},items:seedItems(),points:65,notifications:[],
     ledger:[{id:'L-1',title:'Verified exchange · textbook',delta:20,ownerId:STUDENT,source:'seed-101',createdAt:fakeTime(9)},{id:'L-2',title:'Verified donation · reuse desk',delta:15,ownerId:STUDENT,source:'seed-201',createdAt:fakeTime(6)},{id:'L-3',title:'Demo starting balance',delta:30,ownerId:STUDENT,source:'demo-opening',createdAt:fakeTime(14)}],
     submissions:[{id:501,type:'Recycle',item:'Cardboard packaging',location:'North Residence Point',ownerId:STUDENT,status:'Pending',createdAt:fakeTime(1)}],
     reservations:{},favorites:[],featured:[],featuredCredits:0,workOrders:[],reports:[{id:701,itemId:104,type:'Listing',reason:'Condition details need clarification',status:'Open',createdAt:fakeTime(2),ownerId:'sample-reporter'}],
@@ -45,7 +45,7 @@
       if(!old||!Array.isArray(old.items)||!Array.isArray(old.ledger)||!Array.isArray(old.submissions)||!Array.isArray(old.workOrders)||!Number.isFinite(old.points))return fresh;
       const st={...fresh,...old};
       st.meta={schemaVersion:4};
-      for(const k of ['favorites','featured','workOrders','reports','auditEvents','ledger','submissions','items'])if(!Array.isArray(st[k]))st[k]=fresh[k];
+      for(const k of ['favorites','featured','workOrders','reports','auditEvents','ledger','submissions','items','notifications'])if(!Array.isArray(st[k]))st[k]=fresh[k];
       if(!st.reservations||typeof st.reservations!=='object'||Array.isArray(st.reservations))st.reservations={};
       st.featuredCredits=Number.isInteger(st.featuredCredits)?st.featuredCredits:0;
       st.items=st.items.map(p=>({...p,ownerId:p.ownerId||((p.seller||'').includes('You · demo')||p.id===108?STUDENT:undefined)}));
@@ -66,6 +66,102 @@
     state.auditEvents.unshift({id:'A-'+state.nextId++,role,action,object:String(object),outcome,reason,at:stamp()});
     state.auditEvents=state.auditEvents.slice(0,120);
   }
+  
+function addStudentNotification(title, detail, source) {
+  if (!Array.isArray(state.notifications)) {
+    state.notifications = [];
+  }
+
+  if (state.notifications.some(n => n.source === source)) return;
+
+  state.notifications.unshift({
+    id: 'N-' + state.nextId++,
+    source,
+    title,
+    detail,
+    createdAt: stamp(),
+    read: false
+  });
+
+  state.notifications = state.notifications.slice(0, 40);
+  save();
+}
+
+
+function renderNotifications() {
+  const notifications = Array.isArray(state.notifications)
+    ? state.notifications
+    : [];
+
+  const unreadNotifications = notifications.filter(n => !n.read);
+  const hasUnread = unreadNotifications.length > 0;
+
+  // Update notification dots
+  $$('.notification-dot').forEach(dot => {
+    dot.hidden = !hasUnread || role !== 'student';
+  });
+
+  const list = $('#student-notifications-list');
+  if (!list) return;
+
+  const section = list.closest('.student-notifications');
+
+  // Hide the whole section when all notifications are read
+  if (section) section.hidden = !hasUnread;
+
+  // Render each unread notification with its own button
+ 
+list.innerHTML = unreadNotifications.map(n => {
+  const isWalletNotification =
+    n.title === 'Exchange completed' ||
+    n.title === 'Circular action approved';
+
+  return `
+    <div class="student-notification-row">
+      <div class="notification-content">
+        <strong>${escapeHTML(n.title)}</strong>
+        <small>${escapeHTML(n.detail)}</small>
+
+        ${isWalletNotification ? `
+          <button
+            type="button"
+            class="notification-wallet-link"
+            data-nav="circular"
+            data-jump="wallet">
+            View my wallet ↗&#xFE0E;
+          </button>
+        ` : ''}
+      </div>
+
+      <button
+        type="button"
+        class="notification-read-btn"
+        data-read-notification="${escapeHTML(String(n.id))}">
+        Mark as read
+      </button>
+    </div>
+  `;
+}).join('');
+}
+
+
+
+function markNotificationRead(id) {
+  if (role !== 'student') return;
+
+  const notification = Array.isArray(state.notifications)
+    ? state.notifications.find(n => String(n.id) === String(id))
+    : null;
+
+  if (!notification) return;
+
+  notification.read = true;
+
+  save();
+  renderNotifications();
+}
+
+  
   function hasRole(r){return role===r;}
   function roleGate(required){if(hasRole(required))return true;announce('Please enter the '+required+' demo portal to use that action.');return false;}
   function chooseRole(next){if(!['student','staff'].includes(next))return;role=next;try{localStorage.setItem(ROLE_KEY,role);}catch(e){}closeModal();refreshRole();navigate(next==='staff'?'operations':'exchange');announce('You are now viewing the '+next+' demo portal.');}
@@ -76,8 +172,8 @@
     $('#switch-portal').hidden=role==='guest';
     $('#role-banner').textContent=role==='guest'?'GUEST / SELECT A PORTAL':role.toUpperCase()+' DEMO · CLIENT-SIDE ROLE';
     document.body.dataset.role=role;
+    renderNotifications();
   }
-  
   function showPortalChoice() {
     const template = $('#portal-role-template');
     if (!template) return;
@@ -119,7 +215,7 @@
     $('#modal-shell').scrollTop = 0;
   }
 
-  function paint(){renderProducts();renderWallet();renderAdmin();renderStudent();renderProfile();renderStaffExtra();$('#global-points').textContent=state.points;$('#listing-count').textContent=String(state.items.filter(x=>x.status!=='Removed').length).padStart(2,'0');}
+  function paint(){renderProducts();renderWallet();renderAdmin();renderStudent();renderProfile();renderStaffExtra();renderNotifications();$('#global-points').textContent=state.points;$('#listing-count').textContent=String(state.items.filter(x=>x.status!=='Removed').length).padStart(2,'0');}
   function navigate(where, addHistory = true){
     const allowed=['home','student','profile','exchange','circular','operations'];if(!allowed.includes(where))where='home';
     if(where==='operations'&&role!=='staff'){announce('Staff workspace is available only in Staff Demo.');where=role==='student'?'student':'home';}
@@ -315,7 +411,12 @@ try {
     if(t.dataset.handover){showHandover(Number(t.dataset.handover));return;}
     if(t.dataset.acceptSeller){const id=Number(t.dataset.acceptSeller);const r=state.reservations[id];if(r&&r.stage==='pending'){r.stage='accepted';r.respondedAt=stamp();audit('Seller response simulated','EX-'+id,'Accepted');save();paint();showHandover(id);}return;}
     if(t.dataset.scan){const id=Number(t.dataset.scanItem),r=state.reservations[id];if(r&&r.stage==='accepted'){const key=t.dataset.scan==='seller'?'sellerScan':'buyerScan';if(!r[key]){r[key]=true;audit('Handover confirmation','EX-'+id,key);save();paint();}showHandover(id);}return;}
-    if(t.dataset.complete){const id=Number(t.dataset.complete),r=state.reservations[id],p=state.items.find(x=>x.id===id);if(!r||!p||r.stage!=='accepted'||!r.sellerScan||!r.buyerScan||p.status!=='Reserved'){announce('Both confirmations are required before completion.');return;}p.status='Completed';r.stage='complete';r.completedAt=stamp();state.completed++;issuePoints('Verified exchange · '+p.name,20,'EX-'+id);audit('Exchange completed','EX-'+id,'Completed','Simulated dual-party confirmation');save();closeModal();paint();announce('Exchange completed. +20 demo points recorded once.');return;}
+    const readNotificationButton = t.closest('[data-read-notification]');
+if (readNotificationButton) {
+  markNotificationRead(readNotificationButton.dataset.readNotification);
+  return;
+}
+    if(t.dataset.complete){const id=Number(t.dataset.complete),r=state.reservations[id],p=state.items.find(x=>x.id===id);if(!r||!p||r.stage!=='accepted'||!r.sellerScan||!r.buyerScan||p.status!=='Reserved'){announce('Both confirmations are required before completion.');return;}p.status='Completed';r.stage='complete';r.completedAt=stamp();state.completed++;issuePoints('Verified exchange · '+p.name,20,'EX-'+id);audit('Exchange completed','EX-'+id,'Completed','Simulated dual-party confirmation');addStudentNotification('Exchange completed', 'Your exchange for '+p.name+' is complete. You earned 20 demo points.', 'exchange-'+id);save();closeModal();paint();announce('Exchange completed. +20 demo points recorded once.');return;}
     if(t.dataset.art){selectedArt=t.dataset.art;$$('[data-art]').forEach(b=>b.classList.toggle('selected',b.dataset.art===selectedArt));return;}
     if(t.dataset.redeem){showReward(Number(t.dataset.redeem));return;}
     if(t.dataset.confirmReward){const index=Number(t.dataset.confirmReward),r=REWARDS[index];if(!r||state.points<r.cost){announce('Not enough points.');return;}issuePoints('Redeemed · '+r.title,-r.cost,'REWARD-'+index);if(index===0)state.featuredCredits++;audit('Reward redeemed','REWARD-'+index,'Deducted',r.title);save();closeModal();paint();announce(index===0?'Demo feature credit saved; promotion waits for category capacity.':'Illustrative reward recorded; not a real voucher.');return;}
@@ -353,11 +454,62 @@ try {
       const decision=$('#verification-decision').value,reason=$('#verification-reason').value.trim();if(reason.length<4){announce('Add a short review note.');return;}
       s.status=decision;s.reviewReason=reason;s.reviewedAt=stamp();s.reviewedBy='Demo staff';
       if(decision==='Approved'){state.approved++;issuePoints('Staff-approved '+s.type.toLowerCase()+' · '+s.item,s.type==='Recycle'?5:15,'CA-'+s.id);}
-      audit('Circular action reviewed','CA-'+s.id,decision,reason);save();closeModal();paint();setAdminTab('verification');announce(decision==='Approved'?'Approved and points issued once.':'Rejected, no points issued.');return;
+      
+audit('Circular action reviewed','CA-'+s.id,decision,reason);
+
+addStudentNotification(
+  decision==='Approved' ? 'Circular action approved' : 'Circular action rejected',
+  'Your '+s.type.toLowerCase()+' submission for '+s.item+
+  ' was '+decision.toLowerCase()+'. Review note: '+reason,
+  'circular-review-'+s.id
+);
+
+save();
+closeModal();
+paint();
+setAdminTab('verification');
+announce(decision==='Approved'?'Approved and points issued once.':'Rejected, no points issued.');
+return;
+
     }
-    if(id==='listing-review-form'){
-      const p=state.items.find(x=>x.id===Number(form.dataset.id));if(!p||p.status!=='Pending review')return;const decision=$('#listing-decision').value,reason=$('#listing-review-reason').value.trim();if(!reason){announce('Reason code required.');return;}p.status=decision==='Approved'?'Available':'Rejected';p.reviewReason=reason;audit('Listing human-reviewed','ITEM-'+p.id,p.status,reason);save();closeModal();paint();setAdminTab('moderation');announce('Demo staff decision recorded.');return;
-    }
+    
+if(id==='listing-review-form'){
+  const p=state.items.find(x=>x.id===Number(form.dataset.id));
+
+  if(!p||p.status!=='Pending review')return;
+
+  const decision=$('#listing-decision').value;
+  const reason=$('#listing-review-reason').value.trim();
+
+  if(!reason){
+    announce('Reason code required.');
+    return;
+  }
+
+  p.status=decision==='Approved'?'Available':'Rejected';
+  p.reviewReason=reason;
+
+  audit('Listing human-reviewed','ITEM-'+p.id,p.status,reason);
+
+  // NEW: Notify the student about the listing review
+  if(p.ownerId===STUDENT){
+    addStudentNotification(
+      p.status==='Available' ? 'Listing approved' : 'Listing rejected',
+      'Your listing "'+p.name+'" was '+
+      (p.status==='Available'?'approved and is now available.':'rejected.')+
+      ' Review note: '+reason,
+      'listing-review-'+p.id
+    );
+  }
+
+  save();
+  closeModal();
+  paint();
+  setAdminTab('moderation');
+  announce('Demo staff decision recorded.');
+  return;
+}
+
     if(id==='report-form'){
       const p=state.items.find(x=>x.id===Number(form.dataset.id)),reason=$('#report-reason').value.trim();if(!p||reason.length<8){announce('Please describe the concern.');return;}
       const existing=state.reports.some(r=>r.itemId===p.id&&r.ownerId===STUDENT&&r.status==='Open');if(existing){announce('You already have an open report for this item.');return;}
@@ -369,7 +521,25 @@ try {
       const r=state.reports.find(x=>x.id===Number(form.dataset.id)),reason=$('#report-review-note').value.trim();if(!r||r.status!=='Open'||reason.length<5){announce('Please add review reasoning.');return;}
       const decision=$('#report-decision').value,p=state.items.find(x=>x.id===r.itemId);r.status='Closed';r.resolution=decision;r.reviewReason=reason;r.reviewedAt=stamp();
       if(p&&decision==='Removed')p.status='Removed';else if(p&&r.type==='Exchange'){p.status=r.previousStatus||'Reserved';if(state.reservations[p.id])state.reservations[p.id].stage=r.previousStage||'accepted';}
-      audit('Report human-reviewed','REP-'+r.id,decision,reason);save();closeModal();paint();setAdminTab('moderation');announce('Report resolved with staff reasoning.');return;
+      
+audit('Report human-reviewed','REP-'+r.id,decision,reason);
+
+if(r.ownerId===STUDENT){
+  addStudentNotification(
+    'Report reviewed',
+    'Your report #'+r.id+' has been reviewed. Decision: '+
+    decision+'. Staff note: '+reason,
+    'report-review-'+r.id
+  );
+}
+
+save();
+closeModal();
+paint();
+setAdminTab('moderation');
+announce('Report resolved with staff reasoning.');
+return;
+
     }
   }
   document.addEventListener('click',handleClick);

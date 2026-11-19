@@ -450,3 +450,306 @@
     text-align: center;
   }
 }
+
+/* Partner advertisement: responsive image */
+.partner-visual {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.partner-image-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.partner-ad-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.partner-swipe-hint {
+  display: none;
+}
+
+/* Mobile: horizontal swipe within the image */
+@media (max-width: 700px) {
+  .partner-image-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+  }
+
+  .partner-ad-image {
+    width: 600px;
+    min-width: 600px;
+    max-width: none;
+    height: auto;
+  }
+
+  .partner-swipe-hint {
+    display: block;
+    margin: 8px 0 0;
+    font-size: 12px;
+    text-align: center;
+    opacity: 0.7;
+  }
+}
+/* Student notifications */
+.notification-dot:not([hidden]) {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #D93B40;
+  box-shadow: 0 0 0 2px var(--paper);
+  flex: none;
+}
+
+.nav-my-home .notification-dot {
+  position: absolute;
+  top: 7px;
+  right: -12px;
+}
+
+.mobile-my-home .notification-dot {
+  margin-left: auto;
+  margin-right: 10px;
+}
+
+.student-notifications {
+  margin: 0 0 28px;
+  padding: 23px 27px;
+  background: #F1F4E8;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.student-notification-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+
+.student-notification-row {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.student-notification-row strong {
+  display: block;
+  font-size: 13px;
+  color: var(--deep);
+}
+
+.student-notification-row small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.student-notification-row .notification-new {
+  flex: none;
+  font-size: 9px;
+  letter-spacing: .07em;
+  font-weight: 800;
+  color: #A12B32;
+}
+
+.student-notifications .muted-note {
+  margin: 0;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .student-notifications {
+    padding: 18px 16px;
+  }
+
+  .student-notification-row {
+    flex-wrap: wrap;
+  }
+
+  .nav-my-home .notification-dot {
+    right: -9px;
+  }
+}
+
+/* Individual notification read buttons */
+
+.student-notifications[hidden] {
+  display: none !important;
+}
+
+.student-notification-row {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-read-btn {
+  flex: none;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--deep);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.notification-read-btn:hover {
+  background: #E0E8CE;
+}
+
+@media (max-width: 640px) {
+  .student-notification-row {
+    align-items: flex-start;
+  }
+
+  .notification-read-btn {
+    margin-top: 4px;
+  }
+}
+
+/* Wallet shortcut inside points notifications */
+.notification-wallet-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--deep);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.notification-wallet-link:hover {
+  opacity: 0.7;
+}
+
+/* Replace marketplace reminder with an ad */
+.aside-note.market-ad-card {
+  margin-top: 0;
+  padding: 25px 23px;
+  background: #E8EDDC;
+  border: 1px solid #D7DFC8;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.aside-note.market-ad-card h3 {
+  margin: 0;
+  color: #293721;
+  font-size: 23px;
+  line-height: 1.2;
+}
+
+.aside-note.market-ad-card p {
+  margin: 0;
+  color: #66725D;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.aside-note.market-ad-card .market-ad-link {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #50652D;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.aside-note.market-ad-card .market-ad-link:hover {
+  color: #293721;
+}
+.market-ad-label {
+  color: #75854C;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.market-ad-card small {
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid #CCD5BE;
+  color: #7A856F;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+/* Marketplace ad: non-clickable text link style */
+
+.aside-note.market-ad-card .market-ad-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  width: auto;
+  max-width: 100%;
+  margin: 4px 0 0;
+  padding: 0;
+
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+
+  color: #50652D;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+
+  white-space: nowrap;
+  cursor: default;
+}
+
+.aside-note.market-ad-card .market-ad-arrow {
+  display: inline;
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.aside-note.market-ad-card .market-ad-link:hover {
+  color: #50652D;
+  opacity: 1;
+}
