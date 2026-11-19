@@ -85,15 +85,16 @@
       <div class="portal-dialog onboarding-dialog">
         <section class="onboarding-intro" aria-labelledby="modal-heading">
           <div class="onboarding-copy">
-            <span class="eyebrow">RELOOP CAMPUS / DISCOVER</span>
-            <h2 id="modal-heading">Small actions.<br><i>A more circular campus.</i></h2>
-            <p>Give useful things another life. Exchange with students, repair or recycle responsibly, and earn points for verified actions. Campus staff help keep it all moving.</p>
+            <span class="eyebrow">RELOOP CAMPUS</span>
+            <h2 id="modal-heading">What is<br><i>Reloop?</i></h2>
+            <p>Reloop is a second-hand trading website at the university. In addition to the main second-hand trading page, it also has an incentive mechanism for earning rewards and post exposure through environmental activities on campus. OUr keywords as follows:</p>
             <div class="onboarding-highlights" aria-label="What ReLoop offers">
-              <span>↗ <b>Exchange &amp; Reuse</b></span>
-              <span>↻ <b>Repair &amp; Recycle</b></span>
-              <span>✳ <b>Earn Rewards</b></span>
-              <span>◎ <b>Campus Sustainability</b></span>
+              <span>Exchange &amp; Reuse</span>
+              <span>Repair &amp; Recycle</span>
+              <span>Earn Rewards</span>
+              <span>Campus Sustainability</span>
             </div>
+            <p><br> Give useful things another life. Exchange with students, repair or recycle responsibly, and earn points for verified actions. Campus staff help keep it all moving.</p>
           </div>
           <div class="onboarding-art">
             <img src="assets/onboarding-campus.webp" alt="Illustration of students exchanging books, repairing items and sorting recyclable materials on campus" width="1500" height="844">
@@ -109,7 +110,6 @@
         <section class="onboarding-roles" id="onboarding-role-section" aria-labelledby="onboarding-role-title">
           <span class="eyebrow">02 / CHOOSE YOUR PORTAL</span>
           <h3 id="onboarding-role-title" tabindex="-1">How will you <i>take part?</i></h3>
-          <p>Explore a student or staff perspective. Both use the same fictional records; no sign-in is required.</p>
           ${template.innerHTML}
         </section>
         <p class="onboarding-footnote">EDUCATIONAL PROTOTYPE / ALL USERS, EVENTS AND REWARDS ARE SIMULATED.</p>
